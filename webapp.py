@@ -1,10 +1,11 @@
 """
-XsiKOM-BewerbungsBOT - Web App
-Komi Tevi - Version 1.0
+XsiKOM-BewerbungsBOT - Web App mit PWA
+Komi Tevi - Version 2.0
 """
 from flask import (
     Flask, render_template_string, request,
-    redirect, session, send_file
+    redirect, session, send_file,
+    send_from_directory, make_response
 )
 import os
 from datetime import timedelta
@@ -42,6 +43,47 @@ BASE_HTML = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>XsiKOM-BewerbungsBOT</title>
+
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#00B4D8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="XsiKOM Bot">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/static/icon-512.png">
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(function(reg) { console.log('SW OK'); })
+                    .catch(function(err) { console.log('SW fail'); });
+            });
+        }
+
+        let installPrompt = null;
+        window.addEventListener('beforeinstallprompt', function(e) {
+            e.preventDefault();
+            installPrompt = e;
+            var btn = document.getElementById('install-btn');
+            if (btn) {
+                btn.style.display = 'block';
+                btn.onclick = function() {
+                    if (installPrompt) {
+                        installPrompt.prompt();
+                        installPrompt.userChoice.then(function(result) {
+                            if (result.outcome === 'accepted') {
+                                btn.style.display = 'none';
+                            }
+                            installPrompt = null;
+                        });
+                    }
+                };
+            }
+        });
+    </script>
+
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box;
              font-family: 'Segoe UI', Arial, sans-serif; }
@@ -93,6 +135,10 @@ BASE_HTML = """
                        border-radius: 8px; margin: 10px 0; }
         .alert-warning { background: #FFD93D; color: black; padding: 15px;
                          border-radius: 8px; margin: 10px 0; }
+        @media (max-width: 768px) {
+            .nav a { padding: 8px 12px; font-size: 12px; }
+            .logo { font-size: 24px; }
+        }
     </style>
 </head>
 <body>
@@ -111,6 +157,7 @@ BASE_HTML = """
             <a href="/lebenslauf">Lebenslauf</a>
             <a href="/bewerbungen">Bewerbungen</a>
             <a href="/premium">Premium</a>
+            <a href="/install">App installieren</a>
             <a href="/logout">Logout</a>
         </div>
     </div>
@@ -125,7 +172,7 @@ BASE_HTML = """
             <a href="/impressum">Impressum</a> |
             <a href="/datenschutz">Datenschutz</a> |
             <a href="/agb">AGB</a> |
-            <a href="/premium">Premium</a>
+            <a href="/install">App installieren</a>
         </div>
         <div style="margin-top: 10px;">
             XsiKOM-BewerbungsBOT &copy; 2026 Komi Tevi
@@ -148,11 +195,9 @@ def login():
     if request.method == "POST":
         user = request.form.get("username", "").strip()
         pw   = request.form.get("password", "").strip()
-
         ok, msg = rl.versuch_pruefen(user)
         if not ok:
             return render_login(msg, error=True)
-
         result = benutzer_pruefen(user, pw)
         if result:
             rl.reset(user)
@@ -166,7 +211,6 @@ def login():
         else:
             audit_log("login_fehler", user)
             return render_login("Login falsch!", error=True)
-
     return render_login()
 
 
@@ -225,7 +269,6 @@ def register():
             return redirect("/login")
         else:
             return render_register("Benutzername bereits vergeben!")
-
     return render_register()
 
 
@@ -274,12 +317,8 @@ def render_register(msg=""):
 def dashboard():
     if "user_id" not in session:
         return redirect("/login")
-
     lizenz = lizenz_info(session["user_id"])
-    badge  = ""
-    if lizenz["typ"] != "free":
-        badge = '<span class="premium-badge">PREMIUM</span>'
-
+    badge = '<span class="premium-badge">PREMIUM</span>' if lizenz["typ"] != "free" else ""
     upgrade = ""
     if lizenz["typ"] == "free":
         upgrade = '<a href="/premium" class="btn btn-warning">Upgrade auf Premium - 1.99 EUR/Monat</a>'
@@ -325,7 +364,6 @@ def dashboard():
 def aaliyah_chat():
     if "user_id" not in session:
         return redirect("/login")
-
     antwort_html = ""
     if request.method == "POST":
         frage = request.form.get("frage", "")
@@ -339,9 +377,8 @@ def aaliyah_chat():
                 <strong>Aaliyah:</strong><br>""" + antwort_text + """
             </div>
             """
-
     content = """
-    <h1>Aaliyah KI-Assistentin</h1>
+    <h1>Aaliyah KI</h1>
     <div class="card">
         <h3>Chat mit deiner Bewerbungsberaterin</h3>
         <form method="POST">
@@ -350,7 +387,6 @@ def aaliyah_chat():
         </form>
         """ + antwort_html + """
     </div>
-
     <div class="card">
         <h3>Schnellfragen</h3>
         <form method="POST" style="display: inline;">
@@ -365,10 +401,6 @@ def aaliyah_chat():
             <input type="hidden" name="frage" value="gehalt">
             <button type="submit" class="btn btn-primary">gehalt</button>
         </form>
-        <form method="POST" style="display: inline;">
-            <input type="hidden" name="frage" value="netzwerk">
-            <button type="submit" class="btn btn-primary">netzwerk</button>
-        </form>
     </div>
     """
     return render_template_string(BASE_HTML, content=content, user=session)
@@ -378,89 +410,53 @@ def aaliyah_chat():
 def lebenslauf():
     if "user_id" not in session:
         return redirect("/login")
-
     from lebenslauf_editor import (
         standard_profil, benutzer_daten_laden,
         benutzer_daten_speichern, lebenslauf_aus_profil
     )
-
     profil = benutzer_daten_laden(session["username"]) or standard_profil()
     msg = ""
-
     if request.method == "POST":
         aktion = request.form.get("aktion", "")
-
         if aktion == "speichern":
-            profil["vorname"]      = request.form.get("vorname", "").strip()
-            profil["nachname"]     = request.form.get("nachname", "").strip()
-            profil["strasse"]      = request.form.get("strasse", "").strip()
-            profil["plz"]          = request.form.get("plz", "").strip()
-            profil["stadt"]        = request.form.get("stadt", "").strip()
-            profil["telefon"]      = request.form.get("telefon", "").strip()
-            profil["email"]        = request.form.get("email", "").strip()
-            profil["geburtsdatum"] = request.form.get("geburtsdatum", "").strip()
-            profil["kenntnisse"]   = [
-                z.strip() for z in
-                request.form.get("kenntnisse", "").split("\n")
-                if z.strip()
-            ]
-            profil["sprachen"] = [
-                z.strip() for z in
-                request.form.get("sprachen", "").split("\n")
-                if z.strip()
-            ]
+            for key in ["vorname","nachname","strasse","plz","stadt","telefon","email","geburtsdatum"]:
+                profil[key] = request.form.get(key, "").strip()
+            profil["kenntnisse"] = [z.strip() for z in request.form.get("kenntnisse","").split("\n") if z.strip()]
+            profil["sprachen"]   = [z.strip() for z in request.form.get("sprachen","").split("\n") if z.strip()]
             profil["berufserfahrung"] = []
             profil["zertifikate"]     = []
             benutzer_daten_speichern(session["username"], profil)
             msg = "Profil gespeichert!"
-
         elif aktion == "pdf":
             benutzer_daten_speichern(session["username"], profil)
             pfad = lebenslauf_aus_profil(profil)
             return send_file(pfad, as_attachment=True)
-
-    alert = ""
-    if msg:
-        alert = '<div class="alert-success">' + msg + '</div>'
-
+    alert = '<div class="alert-success">' + msg + '</div>' if msg else ''
     kenntnisse_text = "\n".join(profil.get("kenntnisse", []))
     sprachen_text   = "\n".join(profil.get("sprachen", []))
-
     content = """
-    <h1>Lebenslauf-Editor</h1>
+    <h1>Lebenslauf</h1>
     """ + alert + """
-
     <form method="POST">
         <div class="card">
             <h3>Persoenliche Daten</h3>
-            <p>Vorname:</p>
-            <input type="text" name="vorname" value=" """ + profil.get('vorname', '') + """ ">
-            <p>Nachname:</p>
-            <input type="text" name="nachname" value=" """ + profil.get('nachname', '') + """ ">
-            <p>Strasse:</p>
-            <input type="text" name="strasse" value=" """ + profil.get('strasse', '') + """ ">
-            <p>PLZ:</p>
-            <input type="text" name="plz" value=" """ + profil.get('plz', '') + """ ">
-            <p>Stadt:</p>
-            <input type="text" name="stadt" value=" """ + profil.get('stadt', '') + """ ">
-            <p>Telefon:</p>
-            <input type="text" name="telefon" value=" """ + profil.get('telefon', '') + """ ">
-            <p>E-Mail:</p>
-            <input type="email" name="email" value=" """ + profil.get('email', '') + """ ">
-            <p>Geburtsdatum:</p>
-            <input type="text" name="geburtsdatum" value=" """ + profil.get('geburtsdatum', '') + """ ">
+            <p>Vorname:</p><input type="text" name="vorname" value=" """ + profil.get('vorname','') + """ ">
+            <p>Nachname:</p><input type="text" name="nachname" value=" """ + profil.get('nachname','') + """ ">
+            <p>Strasse:</p><input type="text" name="strasse" value=" """ + profil.get('strasse','') + """ ">
+            <p>PLZ:</p><input type="text" name="plz" value=" """ + profil.get('plz','') + """ ">
+            <p>Stadt:</p><input type="text" name="stadt" value=" """ + profil.get('stadt','') + """ ">
+            <p>Telefon:</p><input type="text" name="telefon" value=" """ + profil.get('telefon','') + """ ">
+            <p>E-Mail:</p><input type="email" name="email" value=" """ + profil.get('email','') + """ ">
+            <p>Geburtsdatum:</p><input type="text" name="geburtsdatum" value=" """ + profil.get('geburtsdatum','') + """ ">
         </div>
-
         <div class="card">
             <h3>IT-Kenntnisse (eine pro Zeile)</h3>
             <textarea name="kenntnisse" rows="6">""" + kenntnisse_text + """</textarea>
         </div>
-
         <div class="card">
             <h3>Sprachen (eine pro Zeile)</h3>
             <textarea name="sprachen" rows="4">""" + sprachen_text + """</textarea>
         </div>
-
         <div class="card">
             <button type="submit" name="aktion" value="speichern" class="btn btn-success">Speichern</button>
             <button type="submit" name="aktion" value="pdf" class="btn btn-primary">PDF herunterladen</button>
@@ -474,65 +470,48 @@ def lebenslauf():
 def bewerbungen():
     if "user_id" not in session:
         return redirect("/login")
-
     msg = ""
     alert_class = "alert-success"
-
     if request.method == "POST":
-        firma = request.form.get("firma", "").strip()
-        email = request.form.get("email", "").strip()
-
+        firma = request.form.get("firma","").strip()
+        email = request.form.get("email","").strip()
         ok, aktuell, limit = kann_bewerbung_senden(session["user_id"])
         if not ok:
-            msg = "Limit erreicht: " + str(aktuell) + "/" + str(limit) + " Bewerbungen. Upgrade auf Premium!"
+            msg = "Limit erreicht: " + str(aktuell) + "/" + str(limit) + ". Upgrade auf Premium!"
             alert_class = "alert-warning"
         else:
             try:
                 from anschreiben_generator import anschreiben_erstellen
                 from email_sender import bewerbung_senden as send_app
                 pfad = anschreiben_erstellen(firma=firma, bereich="allgemein")
-                result = send_app(
-                    empfaenger=email, firma=firma,
-                    position="IT-Fachtechniker / Netzwerktechniker",
-                    anschreiben_pfad=pfad, trockenlauf=True
-                )
+                result = send_app(empfaenger=email, firma=firma,
+                                   position="IT-Fachtechniker / Netzwerktechniker",
+                                   anschreiben_pfad=pfad, trockenlauf=True)
                 if result:
                     nutzung_zaehlen(session["user_id"], "bewerbung")
-                    msg = "Bewerbung an " + firma + " vorbereitet (Trockenlauf)!"
+                    msg = "Bewerbung an " + firma + " vorbereitet!"
                 else:
-                    msg = "Fehler beim Versenden"
+                    msg = "Fehler!"
                     alert_class = "alert-error"
             except Exception as e:
                 msg = "Fehler: " + str(e)
                 alert_class = "alert-error"
-
     ok, aktuell, limit = kann_bewerbung_senden(session["user_id"])
-    alert = ""
-    if msg:
-        alert = '<div class="' + alert_class + '">' + msg + '</div>'
-
-    upgrade_btn = ""
-    if aktuell >= limit:
-        upgrade_btn = '<a href="/premium" class="btn btn-warning">Upgrade fuer unbegrenzte Bewerbungen!</a>'
-
+    alert = '<div class="' + alert_class + '">' + msg + '</div>' if msg else ''
+    upgrade_btn = '<a href="/premium" class="btn btn-warning">Upgrade fuer unbegrenzte Bewerbungen!</a>' if aktuell >= limit else ''
     content = """
     <h1>Bewerbungen senden</h1>
-
     <div class="card">
         <h3>Dein Limit</h3>
         <p>Bewerbungen: <strong>""" + str(aktuell) + " / " + str(limit) + """</strong> diesen Monat</p>
         """ + upgrade_btn + """
     </div>
-
     """ + alert + """
-
     <div class="card">
         <h3>Einzelne Bewerbung (Trockenlauf)</h3>
         <form method="POST">
-            <p>Firma:</p>
-            <input type="text" name="firma" required>
-            <p>E-Mail des Unternehmens:</p>
-            <input type="email" name="email" required>
+            <p>Firma:</p><input type="text" name="firma" required>
+            <p>E-Mail des Unternehmens:</p><input type="email" name="email" required>
             <br>
             <button type="submit" class="btn btn-success">Bewerbung vorbereiten</button>
         </form>
@@ -545,12 +524,10 @@ def bewerbungen():
 def premium():
     content = """
     <h1>Premium Upgrade</h1>
-
     <div class="stat-grid">
         <div class="card">
-            <h2>Free</h2>
-            <h3>0.00 EUR / Monat</h3>
-            <ul style="list-style: none; padding: 0; text-align: left;">
+            <h2>Free</h2><h3>0.00 EUR / Monat</h3>
+            <ul style="list-style: none; padding: 0;">
                 <li>5 Bewerbungen/Monat</li>
                 <li>1 Lebenslauf-Vorlage</li>
                 <li>3 Jobportale</li>
@@ -558,78 +535,48 @@ def premium():
             </ul>
             <button class="btn btn-primary" style="width: 100%;">Aktuell</button>
         </div>
-
         <div class="card" style="border: 3px solid #FFD93D;">
             <span class="premium-badge">BELIEBT</span>
-            <h2 style="margin-top: 10px;">Premium</h2>
-            <h3>1.99 EUR / Monat</h3>
-            <ul style="list-style: none; padding: 0; text-align: left;">
+            <h2 style="margin-top: 10px;">Premium</h2><h3>1.99 EUR / Monat</h3>
+            <ul style="list-style: none; padding: 0;">
                 <li>UNBEGRENZTE Bewerbungen</li>
                 <li>10 Lebenslauf-Vorlagen</li>
                 <li>ALLE 8 Jobportale</li>
                 <li>30 Staedte</li>
-                <li>Auto-Bewerbung</li>
-                <li>Excel Export</li>
-                <li>Charts</li>
                 <li>Premium Aaliyah KI</li>
-                <li>WhatsApp</li>
                 <li>Werbefrei</li>
             </ul>
             <a href="/checkout" class="btn btn-warning" style="width: 100%; text-align: center;">Upgrade jetzt</a>
         </div>
-
         <div class="card">
-            <h2>Premium Jahr</h2>
-            <h3>19.99 EUR / Jahr</h3>
+            <h2>Premium Jahr</h2><h3>19.99 EUR / Jahr</h3>
             <p style="color: #2DD4A8;">(spare 16%)</p>
-            <ul style="list-style: none; padding: 0; text-align: left;">
+            <ul style="list-style: none; padding: 0;">
                 <li>Alles aus Premium</li>
                 <li>Spare 4 EUR/Jahr</li>
                 <li>Prioritaets-Support</li>
-                <li>Beta-Features</li>
             </ul>
             <a href="/checkout?plan=jahr" class="btn btn-success" style="width: 100%; text-align: center;">Jahresplan</a>
         </div>
     </div>
     """
-    return render_template_string(
-        BASE_HTML, content=content,
-        user=session if "user_id" in session else None
-    )
+    return render_template_string(BASE_HTML, content=content, user=session if "user_id" in session else None)
 
 
 @app.route("/checkout")
 def checkout():
     if "user_id" not in session:
         return redirect("/login")
-
-    plan  = request.args.get("plan", "monat")
+    plan = request.args.get("plan", "monat")
     preis = "19.99 EUR / Jahr" if plan == "jahr" else "1.99 EUR / Monat"
-
     content = """
     <h1>Checkout</h1>
-
     <div class="card">
         <h2>Premium """ + plan.title() + """</h2>
         <h3>Preis: """ + preis + """</h3>
-
         <div class="alert-warning">
-            <strong>Demo-Modus:</strong>
-            Echte Zahlungen kommen in der naechsten Version!
+            <strong>Demo-Modus:</strong> Echte Zahlungen kommen bald!
         </div>
-
-        <p><strong>Premium-Vorteile:</strong></p>
-        <ul style="text-align: left; max-width: 400px; margin: 0 auto;">
-            <li>Unbegrenzte Bewerbungen</li>
-            <li>Alle 8 Jobportale</li>
-            <li>30 Staedte</li>
-            <li>Premium Aaliyah KI</li>
-            <li>Excel Export</li>
-            <li>Charts</li>
-            <li>WhatsApp</li>
-            <li>Werbefrei</li>
-        </ul>
-
         <br>
         <a href="/aktivieren" class="btn btn-success">Demo Premium aktivieren</a>
         <a href="/dashboard" class="btn btn-primary">Zurueck</a>
@@ -642,65 +589,78 @@ def checkout():
 def aktivieren():
     if "user_id" not in session:
         return redirect("/login")
-
     lizenz_aktivieren(session["user_id"], "premium", monate=1)
-
     content = """
     <h1>Premium aktiviert!</h1>
     <div class="alert-success">
         <h2>Erfolgreich!</h2>
-        <p>Dein Premium-Account ist jetzt aktiv!</p>
-        <p>Geniesse alle Premium-Features fuer 30 Tage.</p>
+        <p>Dein Premium ist 30 Tage aktiv!</p>
     </div>
-    <br>
-    <a href="/dashboard" class="btn btn-primary">Zum Dashboard</a>
+    <br><a href="/dashboard" class="btn btn-primary">Zum Dashboard</a>
     """
     return render_template_string(BASE_HTML, content=content, user=session)
 
 
+@app.route("/install")
+def install_seite():
+    content = """
+    <h1>App auf Handy installieren</h1>
+
+    <div class="card">
+        <h2>Android (Chrome)</h2>
+        <ol style="text-align: left; padding-left: 20px; color: #E8EDF2;">
+            <li>Oeffne diese Seite in Chrome</li>
+            <li>Tippe auf das Menue (3 Punkte) oben rechts</li>
+            <li>Waehle "Zum Startbildschirm hinzufuegen"</li>
+            <li>Bestaetige mit "Hinzufuegen"</li>
+            <li>Fertig! XsiKOM Icon ist auf deinem Handy!</li>
+        </ol>
+        <br>
+        <button id="install-btn" class="btn btn-success" style="display: none; width: 100%;">
+            Jetzt installieren
+        </button>
+    </div>
+
+    <div class="card">
+        <h2>iPhone (Safari)</h2>
+        <ol style="text-align: left; padding-left: 20px; color: #E8EDF2;">
+            <li>Oeffne diese Seite in Safari</li>
+            <li>Tippe auf das Teilen-Symbol</li>
+            <li>Scrolle und tippe "Zum Home-Bildschirm"</li>
+            <li>Bestaetige mit "Hinzufuegen"</li>
+            <li>Fertig!</li>
+        </ol>
+    </div>
+
+    <div class="card" style="background: linear-gradient(135deg, #00B4D8, #2DD4A8);">
+        <h2 style="color: white;">Vorteile:</h2>
+        <ul style="color: white; text-align: left;">
+            <li>App-Icon auf deinem Geraet</li>
+            <li>Offline-Modus</li>
+            <li>Schneller Zugriff</li>
+            <li>Wie native App</li>
+        </ul>
+    </div>
+    """
+    return render_template_string(BASE_HTML, content=content, user=session if "user_id" in session else None)
+
+
 @app.route("/datenschutz")
 def datenschutz():
-    content = (
-        "<h1>Datenschutzerklaerung</h1>"
-        "<div class='card'>"
-        "<pre style='white-space: pre-wrap; color: #E8EDF2;'>"
-        + datenschutz_text() +
-        "</pre></div>"
-    )
-    return render_template_string(
-        BASE_HTML, content=content,
-        user=session if "user_id" in session else None
-    )
+    content = "<h1>Datenschutz</h1><div class='card'><pre style='white-space: pre-wrap;'>" + datenschutz_text() + "</pre></div>"
+    return render_template_string(BASE_HTML, content=content, user=session if "user_id" in session else None)
 
 
 @app.route("/impressum")
 def impressum():
-    content = (
-        "<h1>Impressum</h1>"
-        "<div class='card'>"
-        "<pre style='white-space: pre-wrap; color: #E8EDF2;'>"
-        + impressum_text() +
-        "</pre></div>"
-    )
-    return render_template_string(
-        BASE_HTML, content=content,
-        user=session if "user_id" in session else None
-    )
+    content = "<h1>Impressum</h1><div class='card'><pre style='white-space: pre-wrap;'>" + impressum_text() + "</pre></div>"
+    return render_template_string(BASE_HTML, content=content, user=session if "user_id" in session else None)
 
 
 @app.route("/agb")
 def agb_seite():
-    content = (
-        "<h1>AGB</h1>"
-        "<div class='card'>"
-        "<pre style='white-space: pre-wrap; color: #E8EDF2;'>"
-        + agb_text() +
-        "</pre></div>"
-    )
-    return render_template_string(
-        BASE_HTML, content=content,
-        user=session if "user_id" in session else None
-    )
+    content = "<h1>AGB</h1><div class='card'><pre style='white-space: pre-wrap;'>" + agb_text() + "</pre></div>"
+    return render_template_string(BASE_HTML, content=content, user=session if "user_id" in session else None)
 
 
 @app.route("/logout")
@@ -709,7 +669,25 @@ def logout():
     session.clear()
     return redirect("/login")
 
-# Datenbank beim Import erstellen
+
+@app.route("/manifest.json")
+def manifest():
+    return send_from_directory(".", "manifest.json", mimetype="application/json")
+
+
+@app.route("/sw.js")
+def service_worker():
+    response = make_response(send_from_directory(".", "sw.js", mimetype="application/javascript"))
+    response.headers["Service-Worker-Allowed"] = "/"
+    response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
+@app.route("/static/<path:filename>")
+def static_files(filename):
+    return send_from_directory("static", filename)
+
+
 user_db_erstellen()
 admin_erstellen()
 
@@ -717,13 +695,11 @@ admin_erstellen()
 if __name__ == "__main__":
     print("")
     print("=" * 60)
-    print("  XsiKOM-BewerbungsBOT Web App")
+    print("  XsiKOM-BewerbungsBOT Web App + PWA")
     print("=" * 60)
     print("  URL:    http://localhost:5000")
+    print("  Install: http://localhost:5000/install")
     print("  Login:  admin / XsiKOM2026!")
     print("=" * 60)
-    print("")
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=False, host="0.0.0.0", port=port)
-
-
