@@ -186,6 +186,8 @@ def profil_speichern(user_id, daten):
 # ============================================================
 # AALIYAH KI
 # ============================================================
+from aaliyah_ki_pro import AaliyahPro
+aaliyah_pro = AaliyahPro()
 import random
 
 AALIYAH_TIPPS = [
@@ -211,7 +213,16 @@ AALIYAH_ANTWORTEN = {
 }
 
 
-def aaliyah_antwort(frage):
+def aaliyah_antwort(frage, kontext=""):
+    """Verwendet echte KI wenn API Key vorhanden."""
+    if os.environ.get("GROQ_API_KEY"):
+        return aaliyah_pro.antwort(frage, kontext)
+    # Fallback
+    f = frage.lower().strip()
+    for key, antwort in AALIYAH_ANTWORTEN.items():
+        if key in f:
+            return antwort
+    return "Interessante Frage! Frag mich nach: tipps, lebenslauf, anschreiben, gehalt, gespraech, netzwerk!"
     f = frage.lower().strip()
     for key, antwort in AALIYAH_ANTWORTEN.items():
         if key in f:
