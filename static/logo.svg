@@ -1,27 +1,70 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#1E3D5C;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#0F1923;stop-opacity:1" />
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E3D5C"/>
+      <stop offset="100%" stop-color="#0F1923"/>
     </linearGradient>
-    <linearGradient id="text" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#00B4D8;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#2DD4A8;stop-opacity:1" />
+    
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00B4D8"/>
+      <stop offset="50%" stop-color="#2DD4A8"/>
+      <stop offset="100%" stop-color="#00B4D8"/>
     </linearGradient>
+    
+    <linearGradient id="botGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFD93D"/>
+      <stop offset="100%" stop-color="#FF8C42"/>
+    </linearGradient>
+    
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
   
-  <!-- Hintergrund Kreis -->
-  <circle cx="100" cy="100" r="90" fill="url(#bg)" stroke="#00B4D8" stroke-width="4"/>
+  <!-- Aeusserer Ring -->
+  <circle cx="120" cy="120" r="115" fill="url(#bgGrad)" 
+          stroke="#00B4D8" stroke-width="3"/>
+  
+  <!-- Innerer Hexagon (Tech-Look) -->
+  <polygon points="120,30 200,75 200,165 120,210 40,165 40,75" 
+           fill="none" stroke="#2DD4A8" stroke-width="2" 
+           opacity="0.4"/>
+  
+  <!-- KI-Chip Symbol oben -->
+  <g transform="translate(120, 70)">
+    <rect x="-25" y="-12" width="50" height="24" rx="6" 
+          fill="url(#botGrad)" filter="url(#glow)"/>
+    <circle cx="-15" cy="0" r="3" fill="#0F1923"/>
+    <circle cx="0" cy="0" r="3" fill="#0F1923"/>
+    <circle cx="15" cy="0" r="3" fill="#0F1923"/>
+  </g>
   
   <!-- XsiKOM Text -->
-  <text x="100" y="95" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="url(#text)" text-anchor="middle">XsiKOM</text>
+  <text x="120" y="135" font-family="Arial, sans-serif" 
+        font-size="32" font-weight="bold" 
+        fill="url(#textGrad)" text-anchor="middle"
+        filter="url(#glow)">XsiKOM</text>
   
-  <!-- Bot Text -->
-  <text x="100" y="130" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#E8EDF2" text-anchor="middle" letter-spacing="2">BOT</text>
+  <!-- BOT Text -->
+  <text x="120" y="165" font-family="Arial, sans-serif" 
+        font-size="20" font-weight="bold" 
+        fill="#E8EDF2" text-anchor="middle" 
+        letter-spacing="6">BOT</text>
   
-  <!-- KI Chip Symbol -->
-  <rect x="75" y="145" width="50" height="12" rx="6" fill="#FFD93D"/>
-  <circle cx="85" cy="151" r="3" fill="#0F1923"/>
-  <circle cx="100" cy="151" r="3" fill="#0F1923"/>
-  <circle cx="115" cy="151" r="3" fill="#0F1923"/>
+  <!-- KI Linien (Verbindungen) -->
+  <line x1="55" y1="120" x2="40" y2="120" 
+        stroke="#00B4D8" stroke-width="2" opacity="0.6"/>
+  <line x1="185" y1="120" x2="200" y2="120" 
+        stroke="#00B4D8" stroke-width="2" opacity="0.6"/>
+  <line x1="120" y1="185" x2="120" y2="200" 
+        stroke="#2DD4A8" stroke-width="2" opacity="0.6"/>
+  
+  <!-- Punkte (KI-Aktivitaet) -->
+  <circle cx="40" cy="120" r="4" fill="#00B4D8"/>
+  <circle cx="200" cy="120" r="4" fill="#00B4D8"/>
+  <circle cx="120" cy="200" r="4" fill="#2DD4A8"/>
 </svg>

@@ -270,9 +270,10 @@ BASE_HTML = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XsiKOM-BewerbungsBOT</title>
+    <title>XsiKOM-BewerbungsBOT - KI Bewerbungs-Assistent</title>
 
     <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
     <meta name="theme-color" content="#00B4D8">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="XsiKOM Bot">
@@ -309,7 +310,80 @@ BASE_HTML = """
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
         .header { background: linear-gradient(135deg, #1E3D5C, #162635);
                   padding: 20px; border-bottom: 3px solid #00B4D8; }
-        .logo { color: #00B4D8; font-size: 32px; font-weight: bold; }
+                .logo-container {
+            display: flex; align-items: center; gap: 12px;
+        }
+        .logo-img {
+            width: 50px; height: 50px;
+            filter: drop-shadow(0 0 10px rgba(0, 180, 216, 0.5));
+        }
+        .logo-text {
+            color: #00B4D8; font-size: 28px; font-weight: bold;
+            background: linear-gradient(90deg, #00B4D8, #2DD4A8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header { 
+            background: linear-gradient(135deg, #1E3D5C, #162635);
+            padding: 20px; border-bottom: 3px solid #00B4D8;
+            box-shadow: 0 4px 20px rgba(0, 180, 216, 0.2);
+        }
+        .nav { 
+            background: #162635; padding: 10px; 
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            overflow-x: auto; white-space: nowrap;
+        }
+        .nav a { 
+            color: #E8EDF2; text-decoration: none;
+            padding: 10px 16px; margin: 0 3px;
+            border-radius: 8px; display: inline-block;
+            font-size: 14px; transition: all 0.3s ease;
+        }
+        .nav a:hover { 
+            background: linear-gradient(135deg, #1E3A4F, #2A4A65);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 180, 216, 0.3);
+        }
+        .card { 
+            background: linear-gradient(135deg, #1A2F42, #243D54);
+            border-radius: 16px; padding: 24px; margin: 15px 0;
+            border: 1px solid #2A4A65;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(0, 180, 216, 0.2);
+        }
+        .btn { 
+            padding: 14px 28px; border: none;
+            border-radius: 10px; cursor: pointer;
+            font-weight: bold; text-decoration: none;
+            display: inline-block; font-size: 14px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 180, 216, 0.4);
+        }
+        .btn-primary { 
+            background: linear-gradient(135deg, #00B4D8, #0077B6);
+            color: white;
+        }
+        .btn-success { 
+            background: linear-gradient(135deg, #2DD4A8, #00B894);
+            color: white;
+        }
+        .btn-warning { 
+            background: linear-gradient(135deg, #FFD93D, #FF8C42);
+            color: #0F1923;
+        }
+        .btn-danger { 
+            background: linear-gradient(135deg, #FF5252, #E74C3C);
+            color: white;
+        }
         .subtitle { color: #2DD4A8; font-size: 14px; }
         .nav { background: #162635; padding: 10px; overflow-x: auto; white-space: nowrap; }
         .nav a { color: #E8EDF2; text-decoration: none;
@@ -367,8 +441,13 @@ BASE_HTML = """
 <body>
     <div class="header">
         <div class="container">
-            <div class="logo">XsiKOM</div>
-            <div class="subtitle">BewerbungsBOT - {{ user.vorname if user else 'Login' }}</div>
+            <div class="logo-container">
+                <img src="/static/logo.svg" alt="XsiKOM Logo" class="logo-img">
+                <div>
+                    <div class="logo-text">XsiKOM</div>
+                    <div class="subtitle">BewerbungsBOT - {{ user.vorname if user else 'Login' }}</div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -411,7 +490,131 @@ BASE_HTML = """
 def index():
     if "user_id" in session:
         return redirect("/dashboard")
-    return redirect("/login")
+    return landing_page()
+
+
+def landing_page():
+    """Marketing Landing Page fuer Besucher."""
+    content = """
+    <div style="text-align: center; padding: 40px 20px;">
+        <h1 style="font-size: 48px; margin-bottom: 20px;
+                   background: linear-gradient(90deg, #00B4D8, #2DD4A8);
+                   -webkit-background-clip: text;
+                   background-clip: text;
+                   -webkit-text-fill-color: transparent;">
+            XsiKOM-BewerbungsBOT
+        </h1>
+        <p style="font-size: 20px; color: #8899AA; margin-bottom: 40px;">
+            Dein KI-gestuetzter Assistent fuer IT-Bewerbungen
+        </p>
+
+        <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-bottom: 50px;">
+            <a href="/register" class="btn btn-success" style="font-size: 16px; padding: 16px 32px;">
+                Kostenlos starten
+            </a>
+            <a href="/login" class="btn btn-primary" style="font-size: 16px; padding: 16px 32px;">
+                Einloggen
+            </a>
+        </div>
+    </div>
+
+    <h2 style="text-align: center; color: #00B4D8; margin: 40px 0 20px;">
+        Was XsiKOM kann
+    </h2>
+
+    <div class="grid">
+        <div class="card" style="text-align: center;">
+            <div style="font-size: 50px; margin-bottom: 15px;">🤖</div>
+            <h3>Aaliyah KI</h3>
+            <p>Deine persoenliche KI-Beraterin. Antwortet auf alle Bewerbungs-Fragen!</p>
+        </div>
+        <div class="card" style="text-align: center;">
+            <div style="font-size: 50px; margin-bottom: 15px;">📄</div>
+            <h3>Lebenslauf-Editor</h3>
+            <p>Erstelle professionelle Lebenslaeufe mit einem Klick.</p>
+        </div>
+        <div class="card" style="text-align: center;">
+            <div style="font-size: 50px; margin-bottom: 15px;">📧</div>
+            <h3>Bewerbungs-Tracking</h3>
+            <p>Verwalte alle deine Bewerbungen an einem Ort.</p>
+        </div>
+        <div class="card" style="text-align: center;">
+            <div style="font-size: 50px; margin-bottom: 15px;">🎯</div>
+            <h3>IT-Fokus</h3>
+            <p>Speziell fuer IT-Praktika und Berufseinsteiger optimiert.</p>
+        </div>
+    </div>
+
+    <h2 style="text-align: center; color: #00B4D8; margin: 40px 0 20px;">
+        Preise
+    </h2>
+
+    <div class="grid">
+        <div class="card" style="text-align: center;">
+            <h2 style="color: #2DD4A8;">Free</h2>
+            <div style="font-size: 36px; font-weight: bold; margin: 20px 0;">
+                0 EUR<span style="font-size: 16px;">/Monat</span>
+            </div>
+            <ul style="list-style: none; padding: 0; text-align: left;">
+                <li style="padding: 8px 0;">5 Bewerbungen/Monat</li>
+                <li style="padding: 8px 0;">1 Lebenslauf</li>
+                <li style="padding: 8px 0;">Basis Aaliyah KI</li>
+                <li style="padding: 8px 0;">PWA Mobile App</li>
+            </ul>
+            <a href="/register" class="btn btn-primary" style="width: 100%; margin-top: 15px;">
+                Kostenlos starten
+            </a>
+        </div>
+
+        <div class="card" style="text-align: center; border: 3px solid #FFD93D;
+                                  background: linear-gradient(135deg, #1A2F42, #2A4A65);">
+            <span class="badge">BELIEBT</span>
+            <h2 style="color: #FFD93D; margin-top: 10px;">Premium</h2>
+            <div style="font-size: 36px; font-weight: bold; margin: 20px 0;">
+                1.99 EUR<span style="font-size: 16px;">/Monat</span>
+            </div>
+            <ul style="list-style: none; padding: 0; text-align: left;">
+                <li style="padding: 8px 0;">UNBEGRENZTE Bewerbungen</li>
+                <li style="padding: 8px 0;">10 Lebenslauf-Vorlagen</li>
+                <li style="padding: 8px 0;">Premium Aaliyah KI</li>
+                <li style="padding: 8px 0;">Excel & PDF Export</li>
+                <li style="padding: 8px 0;">Werbefrei</li>
+            </ul>
+            <a href="/register" class="btn btn-warning" style="width: 100%; margin-top: 15px;">
+                Premium testen
+            </a>
+        </div>
+
+        <div class="card" style="text-align: center;">
+            <h2 style="color: #00B4D8;">Premium Jahr</h2>
+            <div style="font-size: 36px; font-weight: bold; margin: 20px 0;">
+                19.99 EUR<span style="font-size: 16px;">/Jahr</span>
+            </div>
+            <p style="color: #2DD4A8; font-weight: bold;">Spare 16%!</p>
+            <ul style="list-style: none; padding: 0; text-align: left;">
+                <li style="padding: 8px 0;">Alles aus Premium</li>
+                <li style="padding: 8px 0;">Spare 4 EUR/Jahr</li>
+                <li style="padding: 8px 0;">Prioritaets-Support</li>
+                <li style="padding: 8px 0;">Beta-Features</li>
+            </ul>
+            <a href="/register" class="btn btn-success" style="width: 100%; margin-top: 15px;">
+                Jahresplan
+            </a>
+        </div>
+    </div>
+
+    <div class="card" style="text-align: center; margin-top: 40px;
+                              background: linear-gradient(135deg, #00B4D8, #2DD4A8);">
+        <h2 style="color: white;">Bereit fuer deine Traum-Karriere?</h2>
+        <p style="color: white; margin: 20px 0;">
+            Schliesse dich tausenden IT-Bewerbern an, die mit XsiKOM erfolgreich sind!
+        </p>
+        <a href="/register" class="btn btn-warning" style="font-size: 18px; padding: 16px 40px;">
+            Jetzt kostenlos starten
+        </a>
+    </div>
+    """
+    return render_template_string(BASE_HTML, content=content, user=None)
 
 
 @app.route("/login", methods=["GET", "POST"])
