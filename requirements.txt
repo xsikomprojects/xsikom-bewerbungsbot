@@ -3,11 +3,7 @@ gunicorn
 requests
 beautifulsoup4
 fpdf2
-openpyxl
-matplotlib
 schedule
 colorama
 tabulate
-lxml
-cryptography
-Pillow
+
