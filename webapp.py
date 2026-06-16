@@ -1,12 +1,14 @@
 """
 XsiKOM-BewerbungsBOT
-Web App mit PWA Mobile Support
+Web App mit PWA + Echte KI (Groq)
 Komi Tevi - 2026
 """
 import os
 import sqlite3
 import hashlib
 import secrets
+import random
+import requests
 from datetime import datetime, timedelta
 from flask import (
     Flask, render_template_string, request,
@@ -22,6 +24,82 @@ app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
 app.permanent_session_lifetime = timedelta(hours=2)
 
 DB_NAME = "bewerbungen.db"
+
+
+# ============================================================
+# AALIYAH KI - MIT GROQ (ECHTE KI)
+# ============================================================
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+
+SYSTEM_PROMPT = """Du bist Aaliyah, eine professionelle KI-Karriereberaterin fuer IT-Bewerber.
+
+Spezialgebiete:
+- IT-Praktika (Fachinformatiker, Netzwerktechnik, Systemadministration)
+- Bewerbungsschreiben und Anschreiben
+- Lebenslauf-Optimierung
+- Vorstellungsgespraechs-Coaching
+- Gehaltsverhandlungen
+- IT-Karriereberatung
+
+Stil:
+- Antworte auf Deutsch
+- Sei motivierend, freundlich und professionell
+- Maximal 3-5 Saetze
+- Konkrete, umsetzbare Tipps
+- Sparsam mit Emojis"""
+
+
+def get_ki_antwort(frage):
+    """Holt eine Antwort von der Groq KI."""
+    if not GROQ_API_KEY:
+        return ("Hi! Ich bin Aaliyah. Meine KI ist gerade im Setup. "
+                "Frage mich trotzdem - ich antworte mit meinem Basis-Wissen!")
+
+    try:
+        response = requests.post(
+            GROQ_URL,
+            headers={
+                "Authorization": f"Bearer {GROQ_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "llama-3.3-70b-versatile",
+                "messages": [
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": frage}
+                ],
+                "temperature": 0.7,
+                "max_tokens": 500
+            },
+            timeout=20
+        )
+        if response.status_code == 200:
+            return response.json()["choices"][0]["message"]["content"]
+        return "Entschuldigung, da ist etwas schiefgelaufen."
+    except Exception:
+        return "KI-Verbindung fehlgeschlagen. Versuche es nochmal!"
+
+
+# Fallback Tipps (wenn KI offline)
+AALIYAH_TIPPS = [
+    "Passe dein Anschreiben immer an die konkrete Stelle an!",
+    "Erwaehne im Anschreiben konkrete Projekte der Firma.",
+    "Nutze Keywords aus der Stellenanzeige.",
+    "Halte dein Anschreiben auf maximal eine Seite.",
+    "Zeige Motivation - warum genau diese Firma?",
+    "Sende Bewerbungen am Dienstag oder Mittwoch morgens.",
+    "Pruefe deine E-Mail auf Rechtschreibung vor dem Senden.",
+]
+
+
+def aaliyah_antwort(frage):
+    """Hauptfunktion - nutzt echte KI."""
+    return get_ki_antwort(frage)
+
+
+def aaliyah_tipp():
+    return random.choice(AALIYAH_TIPPS)
 
 
 # ============================================================
@@ -184,57 +262,6 @@ def profil_speichern(user_id, daten):
 
 
 # ============================================================
-# AALIYAH KI
-# ============================================================
-from aaliyah_ki_pro import AaliyahPro
-aaliyah_pro = AaliyahPro()
-import random
-
-AALIYAH_TIPPS = [
-    "Passe dein Anschreiben immer an die konkrete Stelle an!",
-    "Erwaehne im Anschreiben konkrete Projekte der Firma.",
-    "Nutze Keywords aus der Stellenanzeige.",
-    "Halte dein Anschreiben auf maximal eine Seite.",
-    "Zeige Motivation - warum genau diese Firma?",
-    "Sende Bewerbungen am Dienstag oder Mittwoch morgens.",
-    "Pruefe deine E-Mail auf Rechtschreibung vor dem Senden.",
-]
-
-AALIYAH_ANTWORTEN = {
-    "hallo": "Hallo! Ich bin Aaliyah. Wie kann ich dir helfen?",
-    "hilfe": "Frag mich nach: tipps, lebenslauf, anschreiben, gehalt, gespraech, netzwerk!",
-    "tipps": "Hier ist ein Tipp: Passe dein Anschreiben individuell an die Stelle an!",
-    "lebenslauf": "Lebenslauf-Tipps:\n1. Chronologisch (neueste zuerst)\n2. Max 2 Seiten\n3. IT-Skills hervorheben\n4. Konkrete Projekte\n5. Professionelles Layout",
-    "anschreiben": "Anschreiben-Tipps:\n1. Individueller Bezug zur Stelle\n2. Konkrete Motivation\n3. Max 1 Seite\n4. Fehlerfrei!",
-    "gehalt": "Gehalt-Tipps:\n- Marktwert recherchieren (Glassdoor)\n- Spanne nennen\n- Begruenden mit Qualifikation\n- Praktikum: 800-1200 EUR ueblich",
-    "gespraech": "Gespraech-Tipps:\n- Selbstpraesentation ueben (2 Min)\n- Fragen vorbereiten\n- STAR-Methode\n- Koerperhaltung beachten\n- Nachfassen nach Gespraech",
-    "netzwerk": "Netzwerk-Interview:\n- OSI-Modell\n- TCP vs UDP\n- VLAN\n- Routing Protokolle\n- Firewall\n- DNS/DHCP",
-    "danke": "Gerne! Viel Erfolg!",
-}
-
-
-def aaliyah_antwort(frage, kontext=""):
-    """Verwendet echte KI wenn API Key vorhanden."""
-    if os.environ.get("GROQ_API_KEY"):
-        return aaliyah_pro.antwort(frage, kontext)
-    # Fallback
-    f = frage.lower().strip()
-    for key, antwort in AALIYAH_ANTWORTEN.items():
-        if key in f:
-            return antwort
-    return "Interessante Frage! Frag mich nach: tipps, lebenslauf, anschreiben, gehalt, gespraech, netzwerk!"
-    f = frage.lower().strip()
-    for key, antwort in AALIYAH_ANTWORTEN.items():
-        if key in f:
-            return antwort
-    return "Interessante Frage! Frag mich nach: tipps, lebenslauf, anschreiben, gehalt, gespraech, netzwerk!"
-
-
-def aaliyah_tipp():
-    return random.choice(AALIYAH_TIPPS)
-
-
-# ============================================================
 # HTML TEMPLATE
 # ============================================================
 BASE_HTML = """
@@ -321,6 +348,10 @@ BASE_HTML = """
                  color: black; padding: 5px 12px;
                  border-radius: 20px; font-size: 12px;
                  font-weight: bold; display: inline-block; }
+        .ki-badge { background: linear-gradient(135deg, #FF69B4, #E040FB);
+                    color: white; padding: 3px 10px;
+                    border-radius: 12px; font-size: 11px;
+                    font-weight: bold; display: inline-block; }
         .alert-ok { background: #2DD4A8; color: black; padding: 15px;
                     border-radius: 8px; margin: 10px 0; }
         .alert-err { background: #FF5252; color: white; padding: 15px;
@@ -493,8 +524,10 @@ def dashboard():
     if not session.get("premium"):
         upgrade = '<a href="/premium" class="btn btn-warning">Upgrade auf Premium - 1.99 EUR/Monat</a>'
 
+    ki_status = '<span class="ki-badge">KI AKTIV</span>' if GROQ_API_KEY else '<span class="alert-warn" style="padding: 3px 10px;">KI offline</span>'
+
     content = """
-    <h1>Dashboard</h1>
+    <h1>Dashboard """ + ki_status + """</h1>
     <p>Willkommen, """ + session['vorname'] + """!</p>
 
     <div class="card">
@@ -506,8 +539,8 @@ def dashboard():
     <h2>Schnellaktionen</h2>
     <div class="grid">
         <div class="stat">
-            <h2>Aaliyah</h2>
-            <p>KI Assistentin</p>
+            <h2>Aaliyah KI</h2>
+            <p>Echte KI Assistentin</p>
             <a href="/aaliyah" class="btn btn-primary">Chat starten</a>
         </div>
         <div class="stat">
@@ -531,7 +564,7 @@ def dashboard():
 
 
 @app.route("/aaliyah", methods=["GET", "POST"])
-def aaliyah():
+def aaliyah_route():
     if "user_id" not in session:
         return redirect("/login")
 
@@ -548,41 +581,47 @@ def aaliyah():
             </div>
             """
 
+    ki_info = ""
+    if GROQ_API_KEY:
+        ki_info = '<span class="ki-badge">Echte KI mit Llama 3</span>'
+    else:
+        ki_info = '<span class="alert-warn" style="padding: 3px 10px;">KI Setup ausstehend</span>'
+
     content = """
-    <h1>Aaliyah KI</h1>
+    <h1>Aaliyah KI """ + ki_info + """</h1>
     <div class="card">
         <h3>Chat mit deiner Bewerbungsberaterin</h3>
         <form method="POST">
-            <input type="text" name="frage" placeholder="Frag Aaliyah..." required>
+            <input type="text" name="frage" placeholder="Frag Aaliyah alles ueber Bewerbungen..." required>
             <button type="submit" class="btn btn-primary">Senden</button>
         </form>
         """ + antwort + """
     </div>
     <div class="card">
-        <h3>Schnellfragen</h3>
+        <h3>Beispiel-Fragen</h3>
         <form method="POST" style="display: inline;">
-            <input type="hidden" name="frage" value="tipps">
-            <button class="btn btn-primary">Tipps</button>
+            <input type="hidden" name="frage" value="Wie schreibe ich ein gutes IT-Anschreiben?">
+            <button class="btn btn-primary">IT-Anschreiben Tipps</button>
         </form>
         <form method="POST" style="display: inline;">
-            <input type="hidden" name="frage" value="lebenslauf">
-            <button class="btn btn-primary">Lebenslauf</button>
+            <input type="hidden" name="frage" value="Welche Fragen werden im Vorstellungsgespraech fuer IT-Praktika gestellt?">
+            <button class="btn btn-primary">Gespraechsfragen</button>
         </form>
         <form method="POST" style="display: inline;">
-            <input type="hidden" name="frage" value="anschreiben">
-            <button class="btn btn-primary">Anschreiben</button>
+            <input type="hidden" name="frage" value="Wie verhandle ich mein Gehalt als IT-Praktikant?">
+            <button class="btn btn-primary">Gehaltsverhandlung</button>
         </form>
         <form method="POST" style="display: inline;">
-            <input type="hidden" name="frage" value="gehalt">
-            <button class="btn btn-primary">Gehalt</button>
+            <input type="hidden" name="frage" value="Was sollte in einem Lebenslauf fuer IT-Praktikum stehen?">
+            <button class="btn btn-primary">Lebenslauf-Tipps</button>
         </form>
         <form method="POST" style="display: inline;">
-            <input type="hidden" name="frage" value="gespraech">
-            <button class="btn btn-primary">Gespraech</button>
+            <input type="hidden" name="frage" value="Erklaere mir das OSI-Modell fuer mein Interview">
+            <button class="btn btn-primary">OSI-Modell</button>
         </form>
         <form method="POST" style="display: inline;">
-            <input type="hidden" name="frage" value="netzwerk">
-            <button class="btn btn-primary">Netzwerk</button>
+            <input type="hidden" name="frage" value="Was sind die wichtigsten Netzwerk-Protokolle?">
+            <button class="btn btn-primary">Netzwerk-Protokolle</button>
         </form>
     </div>
     """
@@ -708,6 +747,7 @@ def premium():
                 <li>5 Bewerbungen/Monat</li>
                 <li>1 Lebenslauf</li>
                 <li>3 Jobportale</li>
+                <li>Basis Aaliyah KI</li>
             </ul>
             <button class="btn btn-primary" style="width: 100%;">Aktuell</button>
         </div>
@@ -840,6 +880,9 @@ def datenschutz():
         <p>Anfragen: xsikom.projects@gmail.com</p>
         <h3>Datensicherheit</h3>
         <p>SSL/TLS, SHA-256 Hashing, Session Management.</p>
+        <h3>KI-Verarbeitung</h3>
+        <p>Bei Nutzung der KI-Funktionen werden Anfragen an Groq Inc. (USA)
+        uebertragen. Keine personenbezogenen Daten werden gespeichert.</p>
     </div>
     """
     return render_template_string(BASE_HTML, content=content, user=session if "user_id" in session else None)
@@ -877,8 +920,8 @@ def agb():
         <h3>Paragraph 1 Geltungsbereich</h3>
         <p>Diese AGB gelten fuer alle Nutzer des XsiKOM-BewerbungsBOT.</p>
         <h3>Paragraph 2 Leistungen</h3>
-        <p><strong>Free:</strong> 5 Bewerbungen/Monat, 1 Lebenslauf, 3 Jobportale</p>
-        <p><strong>Premium (1.99 EUR/Monat):</strong> Unbegrenzt, alle Features</p>
+        <p><strong>Free:</strong> 5 Bewerbungen/Monat, 1 Lebenslauf, 3 Jobportale, Basis-KI</p>
+        <p><strong>Premium (1.99 EUR/Monat):</strong> Unbegrenzt, alle Features, Premium-KI</p>
         <p><strong>Premium Jahr (19.99 EUR):</strong> Spare 16%</p>
         <h3>Paragraph 3 Widerrufsrecht</h3>
         <p>14 Tage Widerrufsrecht ab Vertragsschluss.</p>
@@ -927,10 +970,15 @@ admin_anlegen()
 if __name__ == "__main__":
     print("")
     print("=" * 60)
-    print("  XsiKOM-BewerbungsBOT Web App + PWA")
+    print("  XsiKOM-BewerbungsBOT Web App")
     print("=" * 60)
     print("  URL:    http://localhost:5000")
     print("  Login:  admin / XsiKOM2026!")
+    print("=" * 60)
+    if GROQ_API_KEY:
+        print("  KI:     AKTIV (Groq Llama 3)")
+    else:
+        print("  KI:     Setze GROQ_API_KEY um KI zu aktivieren!")
     print("=" * 60)
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=False, host="0.0.0.0", port=port)
