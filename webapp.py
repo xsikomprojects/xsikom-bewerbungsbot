@@ -993,6 +993,7 @@ BASE_HTML = """
     <div class="nav-inner">
         <a href="/dashboard">🏠 Dashboard</a>
         <a href="/aaliyah">🤖 Aaliyah KI</a>
+            <a href="/avinu">⚡ AVINU Bot</a>
         <a href="/lebenslauf">📝 Lebenslauf</a>
         <a href="/uploads">📂 Dateien</a>
         <a href="/bewerbungen">📧 Bewerbungen</a>
@@ -1230,6 +1231,406 @@ def dashboard():
     return render_template_string(BASE_HTML, content=content, user=session)
 
 
+# ============================================================
+# AVINU - JOB SUCH BOT
+# ============================================================
+from avinu_ki import (
+    avinu_antwort, jobs_suchen_indeed, jobs_suchen_arbeitsagentur,
+    jobs_speichern, jobs_laden, vorlagen_laden,
+    anschreiben_generieren, auto_bewerbung_erstellen,
+    BRANCHEN
+)
+
+
+@app.route("/avinu", methods=["GET", "POST"])
+def avinu_dashboard():
+    if "user_id" not in session:
+        return redirect("/login")
+    
+    msg = ""
+    jobs_count = 0
+    
+    if request.method == "POST":
+        branche = request.form.get("branche", "")
+        standort = request.form.get("standort", "")
+        suchbegriff = request.form.get("suchbegriff", "")
+        
+        if branche and standort:
+            if not suchbegriff:
+                suchbegriff = BRANCHEN.get(branche, ["Job"])[0]
+            
+            jobs1 = jobs_suchen_indeed(suchbegriff, standort, 10)
+            jobs2 = jobs_suchen_arbeitsagentur(suchbegriff, standort, 10)
+            alle_jobs = jobs1 + jobs2
+            
+            if alle_jobs:
+                anzahl = jobs_speichern(session["user_id"], alle_jobs, branche)
+                msg = f'<div class="alert alert-ok">✅ {anzahl} neue Jobs gefunden!</div>'
+            else:
+                msg = '<div class="alert alert-warn">⚠️ Keine Jobs gefunden. Probiere andere Suchbegriffe!</div>'
+    
+    jobs = jobs_laden(session["user_id"], nur_offen=True)
+    jobs_count = len(jobs)
+    
+    # Branchen Optionen
+    branchen_html = ""
+    for key, namen in BRANCHEN.items():
+        branchen_html += f'<option value="{key}">{namen[0]}</option>'
+    
+    # Jobs Liste
+    jobs_html = ""
+    if jobs:
+        for j in jobs[:20]:
+            job_id = j[0]
+            firma = j[2]
+            position = j[3]
+            standort = j[4]
+            branche = j[8]
+            quelle = j[9]
+            
+            jobs_html += f"""
+            <div class="card" style="margin: 12px 0;">
+                <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+                    <div style="flex: 1; min-width: 250px;">
+                        <h3 style="margin: 0 0 8px 0;">💼 {position}</h3>
+                        <p style="color: var(--text-secondary); margin: 4px 0;">
+                            🏢 <strong>{firma}</strong>
+                        </p>
+                        <p style="color: var(--text-muted); margin: 4px 0; font-size: 13px;">
+                            📍 {standort} · 🔗 {quelle} · 🏷️ {branche}
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <a href="/avinu/bewerben/{job_id}" class="btn btn-success">
+                            ⚡ Auto-Bewerben
+                        </a>
+                    </div>
+                </div>
+            </div>
+            """
+    else:
+        jobs_html = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Noch keine Jobs gefunden. Starte eine Suche!</p>'
+    
+    content = f"""
+    <h1>🤖 AVINU - Job Bot</h1>
+    <p>Der intelligente Job-Such-Bot fuer ALLE Branchen!</p>
+    
+    {msg}
+    
+    <div class="card">
+        <h3>🔍 Neue Job-Suche starten</h3>
+        <form method="POST">
+            <select name="branche" required>
+                <option value="">-- Branche waehlen --</option>
+                <option value="it">💻 IT & Technik</option>
+                <option value="handwerk">🔧 Handwerk</option>
+                <option value="gesundheit">🏥 Gesundheit & Pflege</option>
+                <option value="verwaltung">📋 Verwaltung & Buero</option>
+                <option value="verkauf">🛒 Verkauf & Handel</option>
+                <option value="logistik">📦 Logistik & Transport</option>
+                <option value="gastronomie">🍽️ Gastronomie & Hotel</option>
+                <option value="bildung">📚 Bildung & Soziales</option>
+                <option value="marketing">📱 Marketing & Medien</option>
+                <option value="finanzen">💰 Finanzen & Banken</option>
+            </select>
+            
+            <input type="text" name="suchbegriff" placeholder="Spezifischer Suchbegriff (optional)">
+            <input type="text" name="standort" placeholder="Standort (z.B. Berlin)" required>
+            
+            <button type="submit" class="btn btn-primary" style="width: 100%;">
+                🚀 Jobs suchen
+            </button>
+        </form>
+    </div>
+    
+    <div class="grid" style="margin: 30px 0;">
+        <div class="stat-card">
+            <div class="stat-icon">💼</div>
+            <div class="stat-value">{jobs_count}</div>
+            <div class="stat-label">Offene Jobs</div>
+        </div>
+        <a href="/avinu/vorlagen" style="text-decoration: none;">
+            <div class="stat-card">
+                <div class="stat-icon">📝</div>
+                <div class="stat-value">10+</div>
+                <div class="stat-label">Anschreiben-Vorlagen</div>
+            </div>
+        </a>
+        <a href="/avinu/bewerbungen" style="text-decoration: none;">
+            <div class="stat-card">
+                <div class="stat-icon">📧</div>
+                <div class="stat-value">Auto</div>
+                <div class="stat-label">Bewerbungen</div>
+            </div>
+        </a>
+        <a href="/avinu/chat" style="text-decoration: none;">
+            <div class="stat-card">
+                <div class="stat-icon">💬</div>
+                <div class="stat-value">KI Chat</div>
+                <div class="stat-label">AVINU fragen</div>
+            </div>
+        </a>
+    </div>
+    
+    <h2>🎯 Gefundene Jobs</h2>
+    {jobs_html}
+    """
+    
+    return render_template_string(BASE_HTML, content=content, user=session)
+
+
+@app.route("/avinu/bewerben/<int:job_id>", methods=["GET", "POST"])
+def avinu_bewerben(job_id):
+    if "user_id" not in session:
+        return redirect("/login")
+    
+    vorlagen = vorlagen_laden(premium=session.get("premium", False))
+    profil = profil_laden(session["user_id"])
+    
+    msg = ""
+    anschreiben_text = ""
+    
+    if request.method == "POST":
+        vorlage_id = request.form.get("vorlage_id")
+        if vorlage_id:
+            anschreiben_text = anschreiben_generieren(
+                job_id, session["user_id"], 
+                int(vorlage_id), profil
+            )
+            if anschreiben_text:
+                auto_bewerbung_erstellen(
+                    session["user_id"], job_id, anschreiben_text
+                )
+                msg = '<div class="alert alert-ok">✅ Bewerbung erstellt!</div>'
+    
+    # Job laden
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("SELECT * FROM jobs WHERE id=?", (job_id,))
+    job = c.fetchone()
+    conn.close()
+    
+    if not job:
+        return redirect("/avinu")
+    
+    # Vorlagen HTML
+    vorlagen_html = ""
+    for v in vorlagen:
+        premium_badge = '<span class="badge">💎 PREMIUM</span>' if v[4] else ''
+        vorlagen_html += f"""
+        <label style="display: block; margin: 12px 0; padding: 16px;
+                       background: rgba(10,14,26,0.5); border-radius: 12px;
+                       cursor: pointer; border: 1px solid var(--border);">
+            <input type="radio" name="vorlage_id" value="{v[0]}" required>
+            <strong style="margin-left: 8px;">{v[1]}</strong> {premium_badge}
+            <br><small style="color: var(--text-muted); margin-left: 26px;">
+                {v[2]} · {v[5]}
+            </small>
+        </label>
+        """
+    
+    anschreiben_html = ""
+    if anschreiben_text:
+        anschreiben_html = f"""
+        <div class="card" style="margin-top: 20px;">
+            <h3>📝 Dein Anschreiben</h3>
+            <textarea rows="20" style="font-family: 'Courier New', monospace;">{anschreiben_text}</textarea>
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <a href="/avinu/bewerbungen" class="btn btn-primary">
+                    📋 Zu meinen Bewerbungen
+                </a>
+                <a href="/avinu" class="btn btn-success">
+                    🔍 Weitere Jobs
+                </a>
+            </div>
+        </div>
+        """
+    
+    content = f"""
+    <h1>⚡ Auto-Bewerbung</h1>
+    
+    <div class="card">
+        <h3>💼 Job-Details</h3>
+        <p><strong>Position:</strong> {job[3]}</p>
+        <p><strong>Firma:</strong> {job[2]}</p>
+        <p><strong>Standort:</strong> {job[4]}</p>
+        <p><strong>Branche:</strong> {job[8]}</p>
+    </div>
+    
+    {msg}
+    
+    <div class="card">
+        <h3>📝 Anschreiben-Vorlage waehlen</h3>
+        <form method="POST">
+            {vorlagen_html}
+            <button type="submit" class="btn btn-purple" style="width: 100%; margin-top: 20px;">
+                ✨ Anschreiben mit KI generieren
+            </button>
+        </form>
+    </div>
+    
+    {anschreiben_html}
+    
+    <div class="alert alert-info">
+        💡 <strong>Tipp:</strong> Premium-Vorlagen sind professioneller und personalisierter!
+    </div>
+    """
+    
+    return render_template_string(BASE_HTML, content=content, user=session)
+
+
+@app.route("/avinu/vorlagen")
+def avinu_vorlagen():
+    if "user_id" not in session:
+        return redirect("/login")
+    
+    vorlagen = vorlagen_laden(premium=True)
+    
+    cards_html = ""
+    for v in vorlagen:
+        is_premium = v[4] == 1
+        badge = '<span class="badge">💎 PREMIUM</span>' if is_premium else '<span style="color: var(--accent-green);">✓ FREE</span>'
+        
+        cards_html += f"""
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <div>
+                    <h3>{v[1]}</h3>
+                    <p style="color: var(--text-secondary);">{v[2]}</p>
+                    <p style="color: var(--text-muted); font-size: 13px; margin-top: 8px;">
+                        🏷️ Branche: {v[5]}
+                    </p>
+                </div>
+                {badge}
+            </div>
+            <details style="margin-top: 15px;">
+                <summary style="cursor: pointer; color: var(--accent-cyan);">
+                    Vorschau ansehen
+                </summary>
+                <pre style="margin-top: 10px; padding: 15px; 
+                            background: rgba(10,14,26,0.5); 
+                            border-radius: 8px; white-space: pre-wrap;
+                            font-size: 12px; line-height: 1.6;">{v[3][:300]}...</pre>
+            </details>
+        </div>
+        """
+    
+    content = f"""
+    <h1>📝 Anschreiben-Vorlagen</h1>
+    <p>10 professionelle Vorlagen fuer alle Branchen!</p>
+    
+    {cards_html}
+    
+    <div class="alert alert-info">
+        💎 <strong>Premium-Vorlagen</strong> sind individueller und konvertieren besser!
+        <a href="/premium" style="color: var(--accent-cyan);">Jetzt upgraden</a>
+    </div>
+    """
+    
+    return render_template_string(BASE_HTML, content=content, user=session)
+
+
+@app.route("/avinu/bewerbungen")
+def avinu_meine_bewerbungen():
+    if "user_id" not in session:
+        return redirect("/login")
+    
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("""
+        SELECT ab.*, j.firma, j.position 
+        FROM auto_bewerbungen ab
+        LEFT JOIN jobs j ON ab.job_id = j.id
+        WHERE ab.user_id=?
+        ORDER BY ab.id DESC
+    """, (session["user_id"],))
+    bewerbungen = c.fetchall()
+    conn.close()
+    
+    html = ""
+    if bewerbungen:
+        for b in bewerbungen:
+            html += f"""
+            <div class="card">
+                <h3>{b[8] if b[8] else 'Unbekannt'}</h3>
+                <p><strong>Firma:</strong> {b[7] if b[7] else 'Unbekannt'}</p>
+                <p><strong>Status:</strong> {b[4]}</p>
+                <p><strong>Erstellt:</strong> {b[6][:16] if b[6] else 'N/A'}</p>
+                <details>
+                    <summary style="cursor: pointer; color: var(--accent-cyan);">
+                        Anschreiben anzeigen
+                    </summary>
+                    <pre style="margin-top: 10px; padding: 15px;
+                                background: rgba(10,14,26,0.5);
+                                border-radius: 8px; white-space: pre-wrap;
+                                font-size: 12px;">{b[3]}</pre>
+                </details>
+            </div>
+            """
+    else:
+        html = '<p style="text-align: center; color: var(--text-muted);">Noch keine Bewerbungen erstellt</p>'
+    
+    content = f"""
+    <h1>📧 Meine Auto-Bewerbungen</h1>
+    {html}
+    <a href="/avinu" class="btn btn-primary">🔍 Mehr Jobs suchen</a>
+    """
+    
+    return render_template_string(BASE_HTML, content=content, user=session)
+
+
+@app.route("/avinu/chat", methods=["GET", "POST"])
+def avinu_chat():
+    if "user_id" not in session:
+        return redirect("/login")
+    
+    antwort = ""
+    if request.method == "POST":
+        frage = request.form.get("frage", "")
+        if frage:
+            a = avinu_antwort(frage)
+            a_html = a.replace("\n", "<br>")
+            antwort = f"""
+            <div class="alert alert-info" style="flex-direction: column; align-items: start;">
+                <strong style="color: var(--accent-purple);">🤖 AVINU:</strong>
+                <div style="margin-top: 10px; line-height: 1.7;">{a_html}</div>
+            </div>
+            """
+    
+    content = f"""
+    <h1>🤖 AVINU Chat</h1>
+    <p>Frag AVINU alles ueber Jobsuche und Bewerbungen!</p>
+    
+    <div class="card">
+        <form method="POST">
+            <input type="text" name="frage" placeholder="z.B. Welche Jobs gibt es im Handwerk?" required>
+            <button type="submit" class="btn btn-purple" style="width: 100%;">
+                📤 AVINU fragen
+            </button>
+        </form>
+        {antwort}
+    </div>
+    
+    <div class="card">
+        <h3>💡 Beispielfragen</h3>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+            <form method="POST" style="display: inline;">
+                <input type="hidden" name="frage" value="Welche Jobs gibt es im IT-Bereich fuer Anfaenger?">
+                <button class="btn btn-primary">IT Jobs</button>
+            </form>
+            <form method="POST" style="display: inline;">
+                <input type="hidden" name="frage" value="Wie schreibe ich eine Initiativbewerbung?">
+                <button class="btn btn-primary">Initiativbewerbung</button>
+            </form>
+            <form method="POST" style="display: inline;">
+                <input type="hidden" name="frage" value="Welche Branchen suchen aktuell am meisten?">
+                <button class="btn btn-primary">Top Branchen</button>
+            </form>
+        </div>
+    </div>
+    """
+    
+    return render_template_string(BASE_HTML, content=content, user=session)
 @app.route("/aaliyah", methods=["GET", "POST"])
 def aaliyah_route():
     if "user_id" not in session:
