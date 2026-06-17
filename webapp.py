@@ -469,13 +469,20 @@ BASE_HTML = """
         {{ content|safe }}
     </div>
 
-    <div class="footer">
+ <div class="footer">
         <a href="/impressum">Impressum</a> |
         <a href="/datenschutz">Datenschutz</a> |
         <a href="/agb">AGB</a> |
         <a href="/install">App installieren</a>
         <div style="margin-top: 10px;">
-            XsiKOM-BewerbungsBOT &copy; 2026 Komi Tevi
+            XsiKOM-BewerbungsBOT &copy; 2026 
+            <strong style="color: #00B4D8;">XsiKOM DIGITAL Projects</strong>
+        </div>
+        <div style="margin-top: 5px; font-size: 11px; color: #5C6B7A;">
+            Powered by Komi Tevi  |  
+            <a href="mailto:xsikom.projects@gmail.com" style="color: #5C6B7A;">
+                xsikom.projects@gmail.com
+            </a>
         </div>
     </div>
 </body>
