@@ -1,0 +1,30 @@
+{
+  "name": "XsiKOM-BewerbungsBOT",
+  "short_name": "XsiKOM Bot",
+  "description": "IT-Praktikum Bewerbungs-Assistent",
+  "start_url": "/app/frontend/public/manifest.json",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#00B4D8",
+  "background_color": "#0F1923",
+  "scope": "/app/frontend/public/manifest.json",
+  "lang": "de",
+  "icons": [
+    {
+      "src": "/static/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "dir": "auto",
+  "display_override": [
+    "window-controls-overlay"
+  ]
+}

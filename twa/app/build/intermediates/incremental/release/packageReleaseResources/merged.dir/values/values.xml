@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="display_override">
+    
+      
+        <item>standalone</item>
+      
+    
+      
+        <item>minimal-ui</item>
+      
+    
+    </string-array>
+    <bool name="enableNotification">true</bool>
+    <bool name="enableSiteSettingsShortcut">true</bool>
+    <color name="backgroundColor">#0F1923</color>
+    <color name="colorPrimary">#00B4D8</color>
+    <color name="colorPrimaryDark">#000000</color>
+    <color name="navigationColor">#000000</color>
+    <color name="navigationColorDark">#000000</color>
+    <color name="navigationDividerColor">#000000</color>
+    <color name="navigationDividerColorDark">#000000</color>
+    <color name="shortcut_background">#F5F5F5</color>
+    <integer name="splashScreenFadeOutDuration">300</integer>
+    <string name="appName" translatable="false">XsiKOM-BewerbungsBOT</string>
+    <string name="assetStatements">
+    [{
+        \"relation\": [\"delegate_permission/common.handle_all_urls\"],
+        \"target\": {
+            \"namespace\": \"web\",
+            \"site\": \"https://xsikom-bewerbungsbot.onrender.com\"
+        }
+    }]
+    
+  </string>
+    <string name="fallbackType" translatable="false">customtabs</string>
+    <string name="fullScopeUrl" translatable="false">https://xsikom-bewerbungsbot.onrender.com/</string>
+    <string name="generatorApp" translatable="false">bubblewrap-cli</string>
+    <string name="hostName" translatable="false">xsikom-bewerbungsbot.onrender.com</string>
+    <string name="launchUrl" translatable="false">https://xsikom-bewerbungsbot.onrender.com/</string>
+    <string name="launcherName" translatable="false">XsiKOM Bot</string>
+    <string name="orientation" translatable="false">portrait</string>
+    <string name="providerAuthority" translatable="false">com.onrender.xsikom_bewerbungsbot.twa.fileprovider</string>
+    <string name="shortcut_name_0" translatable="false">Dashboard</string>
+    <string name="shortcut_name_1" translatable="false">Aaliyah KI</string>
+    <string name="shortcut_name_2" translatable="false">Lebenslauf</string>
+    <string name="shortcut_short_name_0" translatable="false">Dashboard</string>
+    <string name="shortcut_short_name_1" translatable="false">Aaliyah</string>
+    <string name="shortcut_short_name_2" translatable="false">Lebenslauf</string>
+    <string name="webManifestUrl" translatable="false">https://xsikom-bewerbungsbot.onrender.com/manifest.json</string>
+</resources>

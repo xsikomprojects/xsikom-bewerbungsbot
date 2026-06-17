@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "de.xsikom.bewerbungsbot",
+    "sha256_cert_fingerprints": ["AD:37:ED:BD:3A:86:30:98:B0:4B:19:D9:6E:CD:30:C7:CB:F7:22:89:3C:04:E2:9A:5B:2D:C7:99:A4:60:61:0A"]
+  }
+}]
