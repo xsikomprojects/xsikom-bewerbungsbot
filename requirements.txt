@@ -3,7 +3,7 @@ gunicorn
 requests
 beautifulsoup4
 fpdf2
+Pillow
 schedule
 colorama
 tabulate
-
