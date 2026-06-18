@@ -7,3 +7,6 @@ Pillow
 schedule
 colorama
 tabulate
+pyotp
+qrcode
+cryptography
