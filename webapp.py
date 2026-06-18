@@ -635,7 +635,166 @@ def aaliyah_route():
 
 # AVINU
 @app.route("/avinu", methods=["GET", "POST"])
+def @app.route("/avinu", methods=["GET", "POST"])
 def avinu_dashboard():
+    if "user_id" not in session:
+        return redirect("/login")
+    
+    msg = ""
+    if request.method == "POST":
+        branche = request.form.get("branche", "")
+        suchbegriff = request.form.get("suchbegriff", "")
+        standort = request.form.get("standort", "")
+        radius = int(request.form.get("radius", 25))
+        international = request.form.get("international") == "yes"
+        
+        if not suchbegriff and branche:
+            suchbegriff = BRANCHEN.get(branche, ["Job"])[0]
+        
+        if suchbegriff and standort:
+            try:
+                alle_jobs = alle_jobs_suchen(suchbegriff, standort, radius, international)
+                if alle_jobs:
+                    anzahl = jobs_speichern(session["user_id"], alle_jobs, branche, radius)
+                    intl = " (International)" if international else " (Deutschland)"
+                    msg = f'<div class="alert alert-ok">✅ {anzahl} neue Jobs{intl}!</div>'
+                else:
+                    msg = '<div class="alert alert-warn">⚠️ Keine Jobs! Anderen Suchbegriff probieren.</div>'
+            except Exception as e:
+                msg = f'<div class="alert alert-err">❌ {str(e)[:100]}</div>'
+    
+    filter_typ = request.args.get("filter", "offen")
+    jobs = jobs_laden(session["user_id"], filter_typ)
+    
+    berufe_options = ""
+    for beruf in get_alle_berufe():
+        berufe_options += f'<option value="{beruf}">'
+    
+    branchen_html = ""
+    namen = {"it": "💻 IT", "handwerk": "🔧 Handwerk", "gesundheit": "🏥 Gesundheit",
+             "verwaltung": "📋 Verwaltung", "verkauf": "🛒 Verkauf",
+             "logistik": "📦 Logistik", "gastronomie": "🍽️ Gastronomie",
+             "bildung": "📚 Bildung", "marketing": "📱 Marketing",
+             "finanzen": "💰 Finanzen", "transport": "🚚 Transport",
+             "produktion": "🏭 Produktion", "reinigung": "🧹 Reinigung",
+             "sicherheit": "🛡️ Sicherheit"}
+    for key, name in namen.items():
+        branchen_html += f'<option value="{key}">{name}</option>'
+    
+    jobs_html = ""
+    for j in jobs[:30]:
+        beworben_badge = '<span style="background: var(--accent-green); color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px;">✅ Beworben</span>' if j[11] else ''
+        favorit = j[13] if len(j) > 13 else 0
+        fav_icon = "⭐" if favorit else "☆"
+        land = j[15] if len(j) > 15 else "DE"
+        flag = {"DE": "🇩🇪", "US": "🇺🇸", "UK": "🇬🇧", "FR": "🇫🇷", 
+                "ES": "🇪🇸", "IT": "🇮🇹", "CA": "🇨🇦", "AU": "🇦🇺",
+                "IN": "🇮🇳", "ZA": "🇿🇦", "EU": "🇪🇺", "WORLD": "🌍", "INT": "🌍"}.get(land, "🌍")
+        
+        url_link = f'<a href="{j[6]}" target="_blank">🔗 Original</a>' if j[6] else ""
+        beschr = j[5][:200] + "..." if j[5] and len(j[5]) > 200 else (j[5] or "")
+        
+        jobs_html += f"""
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+                <div style="flex: 1; min-width: 280px;">
+                    <h3>{flag} {j[3]} {beworben_badge}</h3>
+                    <p style="color: var(--accent-cyan); font-size: 16px;">🏢 <strong>{j[2]}</strong></p>
+                    <p style="color: var(--text-secondary); font-size: 13px;">
+                        📍 {j[4]} · 🔗 {j[9]} · 🏷️ {j[8]}
+                    </p>
+                    {f'<p style="color: var(--text-muted); font-size: 13px; margin: 8px 0;">{beschr}</p>' if beschr else ''}
+                    <p>{url_link}</p>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <a href="/avinu/bewerben/{j[0]}" class="btn btn-success">⚡ Bewerben</a>
+                    <a href="/avinu/favorit/{j[0]}" class="btn btn-warning" style="padding: 8px 14px;">{fav_icon}</a>
+                    <a href="/avinu/loeschen/{j[0]}" class="btn btn-danger" style="padding: 8px 14px;"
+                       onclick="return confirm('Loeschen?')">🗑️</a>
+                </div>
+            </div>
+        </div>
+        """
+    
+    if not jobs_html:
+        jobs_html = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Noch keine Jobs! Suche starten ⬆️</p>'
+    
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM jobs WHERE user_id=?", (session["user_id"],))
+    total = c.fetchone()[0]
+    try:
+        c.execute("SELECT COUNT(*) FROM jobs WHERE user_id=? AND beworben=1", (session["user_id"],))
+        beworben_count = c.fetchone()[0]
+        c.execute("SELECT COUNT(*) FROM jobs WHERE user_id=? AND favorit=1", (session["user_id"],))
+        favoriten_count = c.fetchone()[0]
+    except Exception:
+        beworben_count = 0
+        favoriten_count = 0
+    conn.close()
+    
+    content = f"""
+    <h1>⚡ AVINU - Global Job Bot</h1>
+    <p>10+ Jobportale · 300+ Berufe · 🌍 Weltweit</p>
+    {msg}
+    <div class="card">
+        <h3>🔍 Job-Suche</h3>
+        <form method="POST">
+            <p>📂 Branche (optional):</p>
+            <select name="branche">
+                <option value="">-- Branche waehlen --</option>
+                {branchen_html}
+            </select>
+            <p>💼 Beruf / Suchbegriff:</p>
+            <input type="text" name="suchbegriff" 
+                   placeholder="z.B. IT-Fachtechniker, IT-Netzwerktechniker..."
+                   list="berufe-list" required>
+            <datalist id="berufe-list">{berufe_options}</datalist>
+            <p>📍 Standort / Stadt:</p>
+            <input type="text" name="standort" 
+                   placeholder="z.B. Berlin, London, New York, Tokyo..." required>
+            <p>📏 Umkreis: <span id="rv">25</span> km</p>
+            <input type="range" name="radius" min="5" max="200" value="25" step="5"
+                   oninput="document.getElementById('rv').textContent = this.value"
+                   style="width: 100%; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted);">
+                <span>5km</span><span>50km</span><span>100km</span><span>200km</span>
+            </div>
+            
+            <div style="margin: 20px 0; padding: 15px; background: rgba(0,217,255,0.1); border-radius: 12px;">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" name="international" value="yes" style="width: auto;">
+                    <span>🌍 <strong>International suchen</strong> (USA, UK, EU, Remote weltweit)</span>
+                </label>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" style="width: 100%;">
+                🚀 Jobs suchen
+            </button>
+        </form>
+    </div>
+    <div class="grid" style="margin: 30px 0;">
+        <a href="/avinu?filter=alle" style="text-decoration: none;">
+            <div class="stat-card"><div class="stat-icon">💼</div>
+                <div class="stat-value">{total}</div><div class="stat-label">Alle</div></div>
+        </a>
+        <a href="/avinu?filter=offen" style="text-decoration: none;">
+            <div class="stat-card"><div class="stat-icon">📋</div>
+                <div class="stat-value">{total - beworben_count}</div><div class="stat-label">Offen</div></div>
+        </a>
+        <a href="/avinu?filter=beworben" style="text-decoration: none;">
+            <div class="stat-card"><div class="stat-icon">✅</div>
+                <div class="stat-value">{beworben_count}</div><div class="stat-label">Beworben</div></div>
+        </a>
+        <a href="/avinu?filter=favoriten" style="text-decoration: none;">
+            <div class="stat-card"><div class="stat-icon">⭐</div>
+                <div class="stat-value">{favoriten_count}</div><div class="stat-label">Favoriten</div></div>
+        </a>
+    </div>
+    <h2>🎯 Jobs ({len(jobs)}) - Filter: {filter_typ.title()}</h2>
+    {jobs_html}
+    """
+    return render_template_string(BASE_HTML, content=content, user=session)
     if "user_id" not in session:
         return redirect("/login")
     
