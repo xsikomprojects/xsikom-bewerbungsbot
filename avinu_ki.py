@@ -1,9 +1,9 @@
 """
-AVINU - KI Job-Such und Bewerbungs-Bot (ERWEITERT)
+AVINU - KI Job-Such und Bewerbungs-Bot v4.0
 - 6 Jobportale
-- Umkreissuche
-- 100+ Berufe pro Branche
-- Filter & Sortierung
+- Umkreissuche 5-200 km
+- 200+ Berufe in 14 Branchen
+- Auto-Migration der DB
 """
 import os
 import requests
@@ -18,13 +18,9 @@ DB_NAME = "bewerbungen.db"
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-AVINU_PROMPT = """Du bist AVINU, KI-Job-Experte.
-Hilf bei Jobsuche in ALLEN Branchen.
-Antworte auf Deutsch in 3-5 Saetzen."""
-
 
 # ============================================================
-# ALLE BERUFE PRO BRANCHE (100+ insgesamt!)
+# 200+ BERUFE IN 14 BRANCHEN
 # ============================================================
 BRANCHEN = {
     "it": [
@@ -44,7 +40,7 @@ BRANCHEN = {
     ],
     "handwerk": [
         "Elektroniker", "Elektriker", "Anlagenmechaniker",
-        "Sanitär Heizung Klima (SHK)", "Klempner",
+        "Sanitär Heizung Klima", "Klempner",
         "Schreiner", "Tischler", "Zimmerer",
         "Maurer", "Maler und Lackierer",
         "Fliesenleger", "Dachdecker",
@@ -59,13 +55,13 @@ BRANCHEN = {
         "Pflegefachmann", "Pflegefachfrau",
         "Altenpfleger", "Krankenpfleger",
         "Gesundheits- und Krankenpfleger",
-        "Medizinischer Fachangestellter (MFA)",
-        "Zahnmedizinischer Fachangestellter (ZFA)",
-        "Pharmazeutisch-technischer Assistent (PTA)",
+        "Medizinischer Fachangestellter",
+        "Zahnmedizinischer Fachangestellter",
+        "Pharmazeutisch-technischer Assistent",
         "Physiotherapeut", "Ergotherapeut", "Logopäde",
         "Hebamme", "Notfallsanitäter", "Rettungssanitäter",
-        "Operationstechnischer Assistent (OTA)",
-        "Anästhesietechnischer Assistent (ATA)",
+        "Operationstechnischer Assistent",
+        "Anästhesietechnischer Assistent",
         "Heilerziehungspfleger", "Sozialassistent",
         "Diätassistent", "Optiker", "Augenoptiker",
     ],
@@ -113,8 +109,7 @@ BRANCHEN = {
         "Empfangsmitarbeiter Hotel", "Concierge",
         "Housekeeping", "Zimmermädchen",
         "Eventmanager", "Catering Mitarbeiter",
-        "Pizzabäcker", "Bäcker im Hotel",
-        "Patissier", "Restaurantleiter",
+        "Pizzabäcker", "Patissier", "Restaurantleiter",
     ],
     "bildung": [
         "Erzieher", "Kinderpfleger", "Sozialpädagoge",
@@ -182,12 +177,14 @@ BRANCHEN = {
 
 
 # ============================================================
-# DATENBANK SETUP
+# DATENBANK MIT AUTO-MIGRATION
 # ============================================================
 def avinu_db_init():
+    """Erstellt Tabellen und migriert alte DBs."""
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     
+    # JOBS Tabelle
     c.execute("""
         CREATE TABLE IF NOT EXISTS jobs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -208,6 +205,23 @@ def avinu_db_init():
         )
     """)
     
+    # MIGRATION: Spalten hinzufügen falls fehlen
+    try:
+        c.execute("ALTER TABLE jobs ADD COLUMN favorit INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # Spalte existiert bereits
+    
+    try:
+        c.execute("ALTER TABLE jobs ADD COLUMN entfernung INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        c.execute("ALTER TABLE jobs ADD COLUMN bewerbung_datum TEXT")
+    except sqlite3.OperationalError:
+        pass
+    
+    # VORLAGEN Tabelle
     c.execute("""
         CREATE TABLE IF NOT EXISTS anschreiben_vorlagen (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -219,6 +233,7 @@ def avinu_db_init():
         )
     """)
     
+    # AUTO-BEWERBUNGEN
     c.execute("""
         CREATE TABLE IF NOT EXISTS auto_bewerbungen (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -248,25 +263,25 @@ def standard_vorlagen_einfuegen():
     
     vorlagen = [
         ("Klassisch Professionell", "Klassische Bewerbung", 0, "Alle",
-         "Sehr geehrte Damen und Herren,\n\nmit Interesse habe ich Ihre Stellenanzeige als {position} bei {firma} gelesen. Hiermit moechte ich mich bewerben.\n\n{einleitung}\n{hauptteil}\n{schluss}\n\nMit freundlichen Gruessen\n{name}"),
+         "Sehr geehrte Damen und Herren,\n\nmit Interesse habe ich Ihre Stellenanzeige als {position} bei {firma} gelesen.\n\nMit freundlichen Gruessen\n{name}"),
         ("Modern & Dynamisch", "Moderner Stil", 1, "IT, Marketing",
-         "Hallo {ansprechpartner},\n\nIhre Stellenanzeige fuer {position} hat mich begeistert!\n\n{einleitung}\n{hauptteil}\n\nLassen Sie uns sprechen!\n\nBeste Gruesse\n{name}"),
+         "Hallo {ansprechpartner},\n\nIhre Stellenanzeige fuer {position} hat mich begeistert!\n\nBeste Gruesse\n{name}"),
         ("Berufseinstieg", "Fuer Anfaenger", 0, "Alle",
-         "Sehr geehrte Damen und Herren,\n\nmit Begeisterung bewerbe ich mich als {position}.\n\n{einleitung}\n{hauptteil}\n{schluss}\n\nIch freue mich auf ein Gespraech!\n\nMit freundlichen Gruessen\n{name}"),
+         "Sehr geehrte Damen und Herren,\n\nmit Begeisterung bewerbe ich mich als {position}.\n\nMit freundlichen Gruessen\n{name}"),
         ("IT Spezialist", "Fuer IT-Jobs", 1, "IT",
-         "Sehr geehrte Damen und Herren,\n\nals technologiebegeisterter {position} bewerbe ich mich bei {firma}.\n\n{einleitung}\nTechnische Skills:\n{hauptteil}\n\nIch freue mich auf das Gespraech!\n\nMit freundlichen Gruessen\n{name}"),
+         "Sehr geehrte Damen und Herren,\n\nals {position} bewerbe ich mich bei {firma}.\n\nMit freundlichen Gruessen\n{name}"),
         ("Karrierewechsel", "Fuer Branchenwechsler", 1, "Alle",
-         "Sehr geehrte Damen und Herren,\n\nNeue Herausforderungen schaffen Mehrwert - die Position {position} bei {firma} ist genau das.\n\n{einleitung}\n{hauptteil}\n{schluss}\n\nMit freundlichen Gruessen\n{name}"),
+         "Sehr geehrte Damen und Herren,\n\nNeue Herausforderungen schaffen Mehrwert.\n\nMit freundlichen Gruessen\n{name}"),
         ("Handwerk Praktisch", "Fuer Handwerker", 0, "Handwerk",
-         "Sehr geehrte Damen und Herren,\n\nmit Interesse bewerbe ich mich als {position}.\n\n{einleitung}\nMeine Qualifikationen:\n{hauptteil}\n\nUeber Probearbeit freue ich mich.\n\nMit freundlichen Gruessen\n{name}"),
+         "Sehr geehrte Damen und Herren,\n\nmit Interesse bewerbe ich mich als {position}.\n\nMit freundlichen Gruessen\n{name}"),
         ("Gesundheit & Pflege", "Fuer Pflegeberufe", 1, "Gesundheit",
-         "Sehr geehrte Damen und Herren,\n\nMenschen helfen ist meine Berufung. Daher bewerbe ich mich als {position} bei {firma}.\n\n{einleitung}\n{hauptteil}\n{schluss}\n\nMit freundlichen Gruessen\n{name}"),
+         "Sehr geehrte Damen und Herren,\n\nMenschen helfen ist meine Berufung.\n\nMit freundlichen Gruessen\n{name}"),
         ("Fuehrungskraft", "Fuer Manager", 1, "Management",
-         "Sehr geehrte Damen und Herren,\n\nmit Fuehrungserfahrung bewerbe ich mich um die Position {position}.\n\n{einleitung}\nFuehrungsstaerken:\n{hauptteil}\n\nMit besten Gruessen\n{name}"),
+         "Sehr geehrte Damen und Herren,\n\nmit Fuehrungserfahrung bewerbe ich mich.\n\nMit besten Gruessen\n{name}"),
         ("Kreativ & Originell", "Kreativbranche", 1, "Marketing",
-         "Hallo {firma}-Team!\n\nIhre Stellenanzeige hat mich begeistert!\n\n{einleitung}\nWarum ich passe:\n{hauptteil}\n\nWann reden wir?\n\nKreative Gruesse\n{name}"),
+         "Hallo {firma}-Team!\n\nIhre Stellenanzeige hat mich begeistert!\n\nKreative Gruesse\n{name}"),
         ("Premium Executive", "Top-Positionen", 1, "Executive",
-         "Sehr geehrte Damen und Herren,\n\nmit groesstem Interesse habe ich Ihre Ausschreibung fuer {position} gelesen.\n\n{einleitung}\nMein Beitrag:\n{hauptteil}\n\nMit besten Gruessen\n{name}"),
+         "Sehr geehrte Damen und Herren,\n\nmit groesstem Interesse habe ich Ihre Ausschreibung gelesen.\n\nMit besten Gruessen\n{name}"),
     ]
     
     for v in vorlagen:
@@ -283,6 +298,11 @@ def standard_vorlagen_einfuegen():
 # ============================================================
 # AVINU KI
 # ============================================================
+AVINU_PROMPT = """Du bist AVINU, KI-Job-Experte.
+Hilf bei Jobsuche in ALLEN Branchen.
+Antworte auf Deutsch in 3-5 Saetzen."""
+
+
 def avinu_antwort(frage):
     if not GROQ_API_KEY:
         return "AVINU offline."
@@ -312,11 +332,12 @@ def avinu_antwort(frage):
 
 
 # ============================================================
-# JOB-SUCHE - 6 PORTALE!
+# JOB-SUCHE - 6 PORTALE
 # ============================================================
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
 
 
@@ -331,7 +352,6 @@ def jobs_suchen_indeed(suchbegriff, standort, radius=25, anzahl=15):
         r = requests.get(url, headers=HEADERS, timeout=15)
         soup = BeautifulSoup(r.text, "html.parser")
         
-        # Verschiedene Selektoren probieren
         cards = (soup.find_all("div", class_=re.compile("job_seen_beacon")) or
                  soup.find_all("div", class_=re.compile("jobsearch-SerpJobCard")) or
                  soup.find_all("a", class_=re.compile("tapItem")))
@@ -362,7 +382,11 @@ def jobs_suchen_indeed(suchbegriff, standort, radius=25, anzahl=15):
                 link = ""
                 link_elem = card.find("a", href=True)
                 if link_elem:
-                    link = "https://de.indeed.com" + link_elem.get("href", "")
+                    href = link_elem.get("href", "")
+                    if href.startswith("/"):
+                        link = "https://de.indeed.com" + href
+                    else:
+                        link = href
                 
                 if titel:
                     jobs.append({
@@ -379,7 +403,7 @@ def jobs_suchen_indeed(suchbegriff, standort, radius=25, anzahl=15):
 
 
 def jobs_suchen_arbeitsagentur(suchbegriff, standort, radius=25, anzahl=15):
-    """Arbeitsagentur API."""
+    """Arbeitsagentur offizielle API."""
     jobs = []
     try:
         url = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/jobs"
@@ -399,10 +423,13 @@ def jobs_suchen_arbeitsagentur(suchbegriff, standort, radius=25, anzahl=15):
             data = r.json()
             for stellen in data.get("stellenangebote", [])[:anzahl]:
                 try:
+                    arbeitsort = stellen.get("arbeitsort", {})
+                    ort = arbeitsort.get("ort", standort) if isinstance(arbeitsort, dict) else standort
+                    
                     jobs.append({
                         "titel": stellen.get("titel", ""),
                         "firma": stellen.get("arbeitgeber", "Unbekannt"),
-                        "standort": stellen.get("arbeitsort", {}).get("ort", standort),
+                        "standort": ort,
                         "beschreibung": stellen.get("beruf", "")[:300],
                         "url": f"https://www.arbeitsagentur.de/jobsuche/jobdetail/{stellen.get('refnr', '')}",
                         "quelle": "Arbeitsagentur"
@@ -416,7 +443,7 @@ def jobs_suchen_arbeitsagentur(suchbegriff, standort, radius=25, anzahl=15):
 
 
 def jobs_suchen_stepstone(suchbegriff, standort, radius=25, anzahl=10):
-    """StepStone Scraper."""
+    """StepStone."""
     jobs = []
     try:
         q = urllib.parse.quote(suchbegriff)
@@ -460,7 +487,7 @@ def jobs_suchen_stepstone(suchbegriff, standort, radius=25, anzahl=10):
 
 
 def jobs_suchen_xing(suchbegriff, standort, anzahl=10):
-    """Xing Jobs."""
+    """XING."""
     jobs = []
     try:
         q = urllib.parse.quote(suchbegriff)
@@ -559,55 +586,37 @@ def jobs_suchen_kimeta(suchbegriff, standort, anzahl=10):
 
 
 def alle_jobs_suchen(suchbegriff, standort, radius=25):
-    """Sucht in ALLEN Portalen parallel."""
+    """Sucht in ALLEN Portalen."""
     alle_jobs = []
     
-    # Indeed
-    try:
-        alle_jobs.extend(jobs_suchen_indeed(suchbegriff, standort, radius, 15))
-    except Exception:
-        pass
+    # Alle Portale durchsuchen
+    portale = [
+        (jobs_suchen_indeed, [suchbegriff, standort, radius, 15]),
+        (jobs_suchen_arbeitsagentur, [suchbegriff, standort, radius, 15]),
+        (jobs_suchen_stepstone, [suchbegriff, standort, radius, 10]),
+        (jobs_suchen_xing, [suchbegriff, standort, 10]),
+        (jobs_suchen_meinestadt, [suchbegriff, standort, 10]),
+        (jobs_suchen_kimeta, [suchbegriff, standort, 10]),
+    ]
     
-    # Arbeitsagentur
-    try:
-        alle_jobs.extend(jobs_suchen_arbeitsagentur(suchbegriff, standort, radius, 15))
-    except Exception:
-        pass
-    
-    # StepStone
-    try:
-        alle_jobs.extend(jobs_suchen_stepstone(suchbegriff, standort, radius, 10))
-    except Exception:
-        pass
-    
-    # Xing
-    try:
-        alle_jobs.extend(jobs_suchen_xing(suchbegriff, standort, 10))
-    except Exception:
-        pass
-    
-    # meinestadt
-    try:
-        alle_jobs.extend(jobs_suchen_meinestadt(suchbegriff, standort, 10))
-    except Exception:
-        pass
-    
-    # Kimeta
-    try:
-        alle_jobs.extend(jobs_suchen_kimeta(suchbegriff, standort, 10))
-    except Exception:
-        pass
+    for func, args in portale:
+        try:
+            jobs = func(*args)
+            alle_jobs.extend(jobs)
+        except Exception as e:
+            print(f"Portal Fehler ({func.__name__}): {e}")
     
     return alle_jobs
 
 
 def jobs_speichern(user_id, jobs, branche="", radius=25):
-    """Speichert Jobs."""
+    """Speichert Jobs in DB."""
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     gespeichert = 0
     
     for job in jobs:
+        # Duplikat-Check
         c.execute(
             "SELECT id FROM jobs WHERE user_id=? AND firma=? AND position=?",
             (user_id, job.get("firma", ""), job.get("titel", ""))
@@ -615,18 +624,22 @@ def jobs_speichern(user_id, jobs, branche="", radius=25):
         if c.fetchone():
             continue
         
-        c.execute("""
-            INSERT INTO jobs (
-                user_id, firma, position, standort, beschreibung,
-                url, branche, quelle, gefunden, entfernung
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            user_id, job.get("firma", ""), job.get("titel", ""),
-            job.get("standort", ""), job.get("beschreibung", ""),
-            job.get("url", ""), branche, job.get("quelle", ""),
-            datetime.now().isoformat(), radius
-        ))
-        gespeichert += 1
+        try:
+            c.execute("""
+                INSERT INTO jobs (
+                    user_id, firma, position, standort, beschreibung,
+                    url, branche, quelle, gefunden, entfernung, favorit, beworben
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)
+            """, (
+                user_id, job.get("firma", ""), job.get("titel", ""),
+                job.get("standort", ""), job.get("beschreibung", ""),
+                job.get("url", ""), branche, job.get("quelle", ""),
+                datetime.now().isoformat(), radius
+            ))
+            gespeichert += 1
+        except Exception as e:
+            print(f"Insert Fehler: {e}")
+            continue
     
     conn.commit()
     conn.close()
@@ -638,16 +651,20 @@ def jobs_laden(user_id, filter_typ="alle"):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     
-    if filter_typ == "offen":
-        c.execute("SELECT * FROM jobs WHERE user_id=? AND beworben=0 ORDER BY id DESC", (user_id,))
-    elif filter_typ == "beworben":
-        c.execute("SELECT * FROM jobs WHERE user_id=? AND beworben=1 ORDER BY id DESC", (user_id,))
-    elif filter_typ == "favoriten":
-        c.execute("SELECT * FROM jobs WHERE user_id=? AND favorit=1 ORDER BY id DESC", (user_id,))
-    else:
-        c.execute("SELECT * FROM jobs WHERE user_id=? ORDER BY id DESC LIMIT 100", (user_id,))
+    try:
+        if filter_typ == "offen":
+            c.execute("SELECT * FROM jobs WHERE user_id=? AND beworben=0 ORDER BY id DESC", (user_id,))
+        elif filter_typ == "beworben":
+            c.execute("SELECT * FROM jobs WHERE user_id=? AND beworben=1 ORDER BY id DESC", (user_id,))
+        elif filter_typ == "favoriten":
+            c.execute("SELECT * FROM jobs WHERE user_id=? AND favorit=1 ORDER BY id DESC", (user_id,))
+        else:
+            c.execute("SELECT * FROM jobs WHERE user_id=? ORDER BY id DESC LIMIT 100", (user_id,))
+        
+        rows = c.fetchall()
+    except Exception:
+        rows = []
     
-    rows = c.fetchall()
     conn.close()
     return rows
 
@@ -656,12 +673,15 @@ def job_favorit_toggle(job_id, user_id):
     """Toggle Favorit."""
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute("SELECT favorit FROM jobs WHERE id=? AND user_id=?", (job_id, user_id))
-    r = c.fetchone()
-    if r:
-        new_val = 0 if r[0] else 1
-        c.execute("UPDATE jobs SET favorit=? WHERE id=?", (new_val, job_id))
-        conn.commit()
+    try:
+        c.execute("SELECT favorit FROM jobs WHERE id=? AND user_id=?", (job_id, user_id))
+        r = c.fetchone()
+        if r:
+            new_val = 0 if r[0] else 1
+            c.execute("UPDATE jobs SET favorit=? WHERE id=?", (new_val, job_id))
+            conn.commit()
+    except Exception:
+        pass
     conn.close()
 
 
@@ -687,6 +707,7 @@ def vorlagen_laden(premium=False):
 
 
 def anschreiben_generieren(job_id, user_id, vorlage_id, user_profil):
+    """KI-Anschreiben generieren."""
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     c.execute("SELECT * FROM jobs WHERE id=? AND user_id=?", (job_id, user_id))
@@ -704,12 +725,12 @@ Firma: {job[2]}
 Position: {job[3]}
 Standort: {job[4]}
 Branche: {job[8]}
-Beschreibung: {job[5][:200] if job[5] else ''}
 
 Bewerber:
 Name: {user_profil.get('vorname', '')} {user_profil.get('nachname', '')}
 Adresse: {user_profil.get('strasse', '')}, {user_profil.get('plz', '')} {user_profil.get('stadt', '')}
 E-Mail: {user_profil.get('email', '')}
+Telefon: {user_profil.get('telefon', '')}
 Kenntnisse: {user_profil.get('kenntnisse', '')}
 Sprachen: {user_profil.get('sprachen', '')}
 
@@ -720,7 +741,7 @@ Erstelle vollstaendiges Anschreiben mit:
 - Einleitung mit Bezug zur Firma
 - Hauptteil mit Qualifikationen
 - Abschluss mit Gespraechswunsch
-- Gruss
+- Mit freundlichen Gruessen + Name
 
 Max 300 Woerter. Deutsch."""
     
@@ -728,6 +749,7 @@ Max 300 Woerter. Deutsch."""
 
 
 def auto_bewerbung_erstellen(user_id, job_id, anschreiben):
+    """Speichert Auto-Bewerbung."""
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     c.execute("""
@@ -735,20 +757,25 @@ def auto_bewerbung_erstellen(user_id, job_id, anschreiben):
         VALUES (?, ?, ?, ?)
     """, (user_id, job_id, anschreiben, datetime.now().isoformat()))
     bewerbung_id = c.lastrowid
-    c.execute("UPDATE jobs SET beworben=1, bewerbung_datum=? WHERE id=?",
-              (datetime.now().isoformat(), job_id))
+    
+    try:
+        c.execute("UPDATE jobs SET beworben=1, bewerbung_datum=? WHERE id=?",
+                  (datetime.now().isoformat(), job_id))
+    except Exception:
+        c.execute("UPDATE jobs SET beworben=1 WHERE id=?", (job_id,))
+    
     conn.commit()
     conn.close()
     return bewerbung_id
 
 
 def get_alle_berufe():
-    """Gibt alle Berufe alphabetisch zurueck."""
+    """Alle Berufe alphabetisch."""
     alle = []
     for berufe in BRANCHEN.values():
         alle.extend(berufe)
     return sorted(set(alle))
 
 
-# Init
+# Init beim Import
 avinu_db_init()
