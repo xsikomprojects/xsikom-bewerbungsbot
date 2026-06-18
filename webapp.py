@@ -1,6 +1,6 @@
 """
-XsiKOM-BewerbungsBOT v4.0
-Mit AVINU Bot, 6 Portale, Umkreissuche, 200+ Berufe
+XsiKOM-BewerbungsBOT v5.0 - GLOBAL
+Mit AVINU Bot, Multi-Language, 300+ Berufe weltweit
 """
 import os
 import sqlite3
@@ -21,10 +21,9 @@ from PIL import Image
 from security import (
     generate_2fa_secret, generate_qr_code,
     verify_2fa_token, get_2fa_status, enable_2fa, disable_2fa,
-    password_strength, create_password_reset_token,
-    verify_reset_token, use_reset_token,
+    create_password_reset_token, verify_reset_token, use_reset_token,
     request_account_deletion, cancel_deletion,
-    get_deletion_status, export_user_data, audit_log, get_audit_log
+    get_deletion_status, export_user_data, audit_log
 )
 
 from avinu_ki import (
@@ -48,7 +47,6 @@ CONTACT_EMAIL = "xsikom_digital@xsikom.de"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
-# KI
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
@@ -59,7 +57,8 @@ def get_ki_antwort(frage):
     try:
         response = requests.post(
             GROQ_URL,
-            headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
+            headers={"Authorization": f"Bearer {GROQ_API_KEY}",
+                     "Content-Type": "application/json"},
             json={
                 "model": "llama-3.3-70b-versatile",
                 "messages": [
@@ -68,7 +67,7 @@ def get_ki_antwort(frage):
                 ],
                 "temperature": 0.7, "max_tokens": 500
             },
-            timeout=20
+            timeout=15
         )
         if response.status_code == 200:
             return response.json()["choices"][0]["message"]["content"]
@@ -87,7 +86,6 @@ def aaliyah_tipp():
     ])
 
 
-# DB
 def db_init():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
@@ -272,7 +270,7 @@ def upload_loeschen(upload_id, user_id):
     conn.close()
 
 
-# HTML
+# HTML TEMPLATE
 BASE_HTML = """<!DOCTYPE html>
 <html lang="de">
 <head>
@@ -364,7 +362,6 @@ h2 { font-size: 26px; font-weight: 600; margin-bottom: 16px; }
 h3 { font-size: 18px; font-weight: 600; color: var(--accent-cyan); margin-bottom: 12px; }
 p { line-height: 1.7; color: var(--text-secondary); margin-bottom: 8px; }
 a { color: var(--accent-cyan); text-decoration: none; }
-a:hover { color: var(--accent-purple); }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
 .stat-card { background: linear-gradient(135deg, rgba(20,28,48,0.8), rgba(30,38,58,0.6));
     border: 1px solid var(--border); border-radius: 20px; padding: 30px;
@@ -407,7 +404,7 @@ a:hover { color: var(--accent-purple); }
 <body>
 <div id="cookie-banner">
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-        <div>🍪 Wir verwenden technisch notwendige Cookies. <a href="/datenschutz" style="color: var(--accent-cyan);">Mehr</a></div>
+        <div>🍪 Wir verwenden Cookies. <a href="/datenschutz" style="color: var(--accent-cyan);">Mehr</a></div>
         <button onclick="cookieAccept()" class="btn btn-success">✓ Akzeptieren</button>
     </div>
 </div>
@@ -453,7 +450,6 @@ a:hover { color: var(--accent-purple); }
 </html>"""
 
 
-# ROUTEN
 @app.route("/")
 def index():
     if "user_id" in session:
@@ -582,7 +578,7 @@ def dashboard():
             <div class="stat-card">
                 <div class="stat-icon">⚡</div>
                 <div class="stat-value">AVINU</div>
-                <div class="stat-label">Job Bot</div>
+                <div class="stat-label">Global Jobs</div>
             </div>
         </a>
         <a href="/lebenslauf" style="text-decoration: none;">
@@ -619,7 +615,6 @@ def aaliyah_route():
             a = get_ki_antwort(frage)
             a_html = a.replace("\n", "<br>")
             antwort = f'<div class="alert alert-info" style="flex-direction: column; align-items: start;"><strong>🤖 Aaliyah:</strong><div style="margin-top: 10px;">{a_html}</div></div>'
-
     content = f"""
     <h1>🤖 Aaliyah KI</h1>
     <div class="card">
@@ -633,9 +628,7 @@ def aaliyah_route():
     return render_template_string(BASE_HTML, content=content, user=session)
 
 
-# AVINU
 @app.route("/avinu", methods=["GET", "POST"])
-def @app.route("/avinu", methods=["GET", "POST"])
 def avinu_dashboard():
     if "user_id" not in session:
         return redirect("/login")
@@ -656,7 +649,7 @@ def avinu_dashboard():
                 alle_jobs = alle_jobs_suchen(suchbegriff, standort, radius, international)
                 if alle_jobs:
                     anzahl = jobs_speichern(session["user_id"], alle_jobs, branche, radius)
-                    intl = " (International)" if international else " (Deutschland)"
+                    intl = " 🌍" if international else " 🇩🇪"
                     msg = f'<div class="alert alert-ok">✅ {anzahl} neue Jobs{intl}!</div>'
                 else:
                     msg = '<div class="alert alert-warn">⚠️ Keine Jobs! Anderen Suchbegriff probieren.</div>'
@@ -687,7 +680,7 @@ def avinu_dashboard():
         favorit = j[13] if len(j) > 13 else 0
         fav_icon = "⭐" if favorit else "☆"
         land = j[15] if len(j) > 15 else "DE"
-        flag = {"DE": "🇩🇪", "US": "🇺🇸", "UK": "🇬🇧", "FR": "🇫🇷", 
+        flag = {"DE": "🇩🇪", "US": "🇺🇸", "UK": "🇬🇧", "FR": "🇫🇷",
                 "ES": "🇪🇸", "IT": "🇮🇹", "CA": "🇨🇦", "AU": "🇦🇺",
                 "IN": "🇮🇳", "ZA": "🇿🇦", "EU": "🇪🇺", "WORLD": "🌍", "INT": "🌍"}.get(land, "🌍")
         
@@ -717,7 +710,7 @@ def avinu_dashboard():
         """
     
     if not jobs_html:
-        jobs_html = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Noch keine Jobs! Suche starten ⬆️</p>'
+        jobs_html = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Noch keine Jobs!</p>'
     
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
@@ -742,173 +735,27 @@ def avinu_dashboard():
         <form method="POST">
             <p>📂 Branche (optional):</p>
             <select name="branche">
-                <option value="">-- Branche waehlen --</option>
+                <option value="">-- Branche --</option>
                 {branchen_html}
             </select>
             <p>💼 Beruf / Suchbegriff:</p>
             <input type="text" name="suchbegriff" 
-                   placeholder="z.B. IT-Fachtechniker, IT-Netzwerktechniker..."
-                   list="berufe-list" required>
-            <datalist id="berufe-list">{berufe_options}</datalist>
-            <p>📍 Standort / Stadt:</p>
-            <input type="text" name="standort" 
-                   placeholder="z.B. Berlin, London, New York, Tokyo..." required>
-            <p>📏 Umkreis: <span id="rv">25</span> km</p>
-            <input type="range" name="radius" min="5" max="200" value="25" step="5"
-                   oninput="document.getElementById('rv').textContent = this.value"
-                   style="width: 100%; margin-bottom: 15px;">
-            <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted);">
-                <span>5km</span><span>50km</span><span>100km</span><span>200km</span>
-            </div>
-            
-            <div style="margin: 20px 0; padding: 15px; background: rgba(0,217,255,0.1); border-radius: 12px;">
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                    <input type="checkbox" name="international" value="yes" style="width: auto;">
-                    <span>🌍 <strong>International suchen</strong> (USA, UK, EU, Remote weltweit)</span>
-                </label>
-            </div>
-            
-            <button type="submit" class="btn btn-primary" style="width: 100%;">
-                🚀 Jobs suchen
-            </button>
-        </form>
-    </div>
-    <div class="grid" style="margin: 30px 0;">
-        <a href="/avinu?filter=alle" style="text-decoration: none;">
-            <div class="stat-card"><div class="stat-icon">💼</div>
-                <div class="stat-value">{total}</div><div class="stat-label">Alle</div></div>
-        </a>
-        <a href="/avinu?filter=offen" style="text-decoration: none;">
-            <div class="stat-card"><div class="stat-icon">📋</div>
-                <div class="stat-value">{total - beworben_count}</div><div class="stat-label">Offen</div></div>
-        </a>
-        <a href="/avinu?filter=beworben" style="text-decoration: none;">
-            <div class="stat-card"><div class="stat-icon">✅</div>
-                <div class="stat-value">{beworben_count}</div><div class="stat-label">Beworben</div></div>
-        </a>
-        <a href="/avinu?filter=favoriten" style="text-decoration: none;">
-            <div class="stat-card"><div class="stat-icon">⭐</div>
-                <div class="stat-value">{favoriten_count}</div><div class="stat-label">Favoriten</div></div>
-        </a>
-    </div>
-    <h2>🎯 Jobs ({len(jobs)}) - Filter: {filter_typ.title()}</h2>
-    {jobs_html}
-    """
-    return render_template_string(BASE_HTML, content=content, user=session)
-    if "user_id" not in session:
-        return redirect("/login")
-    
-    msg = ""
-    if request.method == "POST":
-        branche = request.form.get("branche", "")
-        suchbegriff = request.form.get("suchbegriff", "")
-        standort = request.form.get("standort", "")
-        radius = int(request.form.get("radius", 25))
-        
-        if not suchbegriff and branche:
-            suchbegriff = BRANCHEN.get(branche, ["Job"])[0]
-        
-        if suchbegriff and standort:
-            try:
-                alle_jobs = alle_jobs_suchen(suchbegriff, standort, radius)
-                if alle_jobs:
-                    anzahl = jobs_speichern(session["user_id"], alle_jobs, branche, radius)
-                    msg = f'<div class="alert alert-ok">✅ {anzahl} neue Jobs gefunden!</div>'
-                else:
-                    msg = '<div class="alert alert-warn">⚠️ Keine Jobs gefunden. Anderen Suchbegriff probieren!</div>'
-            except Exception as e:
-                msg = f'<div class="alert alert-err">❌ Fehler: {str(e)[:100]}</div>'
-    
-    filter_typ = request.args.get("filter", "offen")
-    jobs = jobs_laden(session["user_id"], filter_typ)
-    
-    berufe_options = ""
-    for beruf in get_alle_berufe():
-        berufe_options += f'<option value="{beruf}">'
-    
-    branchen_html = ""
-    namen = {"it": "💻 IT", "handwerk": "🔧 Handwerk", "gesundheit": "🏥 Gesundheit",
-             "verwaltung": "📋 Verwaltung", "verkauf": "🛒 Verkauf",
-             "logistik": "📦 Logistik", "gastronomie": "🍽️ Gastronomie",
-             "bildung": "📚 Bildung", "marketing": "📱 Marketing",
-             "finanzen": "💰 Finanzen", "transport": "🚚 Transport",
-             "produktion": "🏭 Produktion", "reinigung": "🧹 Reinigung",
-             "sicherheit": "🛡️ Sicherheit"}
-    for key, name in namen.items():
-        branchen_html += f'<option value="{key}">{name}</option>'
-    
-    jobs_html = ""
-    for j in jobs[:30]:
-        beworben_badge = '<span style="background: var(--accent-green); color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px;">✅ Beworben</span>' if j[11] else ''
-        favorit = j[13] if len(j) > 13 else 0
-        fav_icon = "⭐" if favorit else "☆"
-        url_link = f'<a href="{j[6]}" target="_blank">🔗 Original</a>' if j[6] else ""
-        beschr = j[5][:200] + "..." if j[5] and len(j[5]) > 200 else (j[5] or "")
-        
-        jobs_html += f"""
-        <div class="card">
-            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
-                <div style="flex: 1; min-width: 280px;">
-                    <h3>💼 {j[3]} {beworben_badge}</h3>
-                    <p style="color: var(--accent-cyan); font-size: 16px;">🏢 <strong>{j[2]}</strong></p>
-                    <p style="color: var(--text-secondary); font-size: 13px;">
-                        📍 {j[4]} · 🔗 {j[9]} · 🏷️ {j[8]}
-                    </p>
-                    {f'<p style="color: var(--text-muted); font-size: 13px; margin: 8px 0;">{beschr}</p>' if beschr else ''}
-                    <p>{url_link}</p>
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <a href="/avinu/bewerben/{j[0]}" class="btn btn-success">⚡ Bewerben</a>
-                    <a href="/avinu/favorit/{j[0]}" class="btn btn-warning" style="padding: 8px 14px;">{fav_icon}</a>
-                    <a href="/avinu/loeschen/{j[0]}" class="btn btn-danger" style="padding: 8px 14px;"
-                       onclick="return confirm('Loeschen?')">🗑️</a>
-                </div>
-            </div>
-        </div>
-        """
-    
-    if not jobs_html:
-        jobs_html = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Noch keine Jobs! Suche starten ⬆️</p>'
-    
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute("SELECT COUNT(*) FROM jobs WHERE user_id=?", (session["user_id"],))
-    total = c.fetchone()[0]
-    c.execute("SELECT COUNT(*) FROM jobs WHERE user_id=? AND beworben=1", (session["user_id"],))
-    beworben_count = c.fetchone()[0]
-    c.execute("SELECT COUNT(*) FROM jobs WHERE user_id=? AND favorit=1", (session["user_id"],))
-    favoriten_count = c.fetchone()[0]
-    conn.close()
-    
-    content = f"""
-    <h1>⚡ AVINU Bot</h1>
-    <p>6 Jobportale · 14 Branchen · 200+ Berufe</p>
-    {msg}
-    <div class="card">
-        <h3>🔍 Job-Suche</h3>
-        <form method="POST">
-            <p>📂 Branche (optional):</p>
-            <select name="branche">
-                <option value="">-- Branche waehlen --</option>
-                {branchen_html}
-            </select>
-            <p>💼 Beruf / Suchbegriff:</p>
-            <input type="text" name="suchbegriff" 
-                   placeholder="z.B. Fachinformatiker, Elektriker, Pflegekraft..."
+                   placeholder="IT-Fachtechniker, IT-Netzwerktechniker, IT-Techniker..."
                    list="berufe-list" required>
             <datalist id="berufe-list">{berufe_options}</datalist>
             <p>📍 Standort:</p>
-            <input type="text" name="standort" placeholder="z.B. Berlin, Mainz..." required>
+            <input type="text" name="standort" placeholder="Berlin, London, New York..." required>
             <p>📏 Umkreis: <span id="rv">25</span> km</p>
             <input type="range" name="radius" min="5" max="200" value="25" step="5"
                    oninput="document.getElementById('rv').textContent = this.value"
                    style="width: 100%; margin-bottom: 15px;">
-            <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted);">
-                <span>5km</span><span>50km</span><span>100km</span><span>200km</span>
+            <div style="margin: 20px 0; padding: 15px; background: rgba(0,217,255,0.1); border-radius: 12px;">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" name="international" value="yes" style="width: auto;">
+                    <span>🌍 <strong>International</strong> (USA, UK, EU, Remote)</span>
+                </label>
             </div>
-            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 15px;">
-                🚀 Jobs suchen
-            </button>
+            <button type="submit" class="btn btn-primary" style="width: 100%;">🚀 Jobs suchen</button>
         </form>
     </div>
     <div class="grid" style="margin: 30px 0;">
@@ -929,7 +776,7 @@ def avinu_dashboard():
                 <div class="stat-value">{favoriten_count}</div><div class="stat-label">Favoriten</div></div>
         </a>
     </div>
-    <h2>🎯 Jobs ({len(jobs)}) - Filter: {filter_typ.title()}</h2>
+    <h2>🎯 Jobs ({len(jobs)})</h2>
     {jobs_html}
     """
     return render_template_string(BASE_HTML, content=content, user=session)
@@ -983,7 +830,7 @@ def avinu_bewerben(job_id):
     if anschreiben_text:
         anschreiben_html = f"""
         <div class="card">
-            <h3>📝 Dein Anschreiben</h3>
+            <h3>📝 Anschreiben</h3>
             <textarea rows="15">{anschreiben_text}</textarea>
             <a href="/avinu" class="btn btn-primary">← Zurueck</a>
         </div>
@@ -1004,7 +851,6 @@ def avinu_bewerben(job_id):
     return render_template_string(BASE_HTML, content=content, user=session)
 
 
-# Uploads
 @app.route("/uploads", methods=["GET", "POST"])
 def uploads():
     if "user_id" not in session:
@@ -1033,7 +879,7 @@ def uploads():
         </div>
         """
     if not uploads_html:
-        uploads_html = '<p style="text-align: center;">Keine Dateien</p>'
+        uploads_html = '<p>Keine Dateien</p>'
 
     content = f"""
     <h1>📂 Dateien</h1>
@@ -1210,7 +1056,6 @@ def aktivieren():
     return render_template_string(BASE_HTML, content=content, user=session)
 
 
-# Profil
 @app.route("/profil")
 def profil():
     if "user_id" not in session:
@@ -1295,10 +1140,6 @@ def profil_password():
                 c.execute("UPDATE benutzer SET passwort=? WHERE id=?", (hash_pw(new), session["user_id"]))
                 conn.commit()
                 msg = '<div class="alert alert-ok">✅</div>'
-            else:
-                msg = '<div class="alert alert-err">❌</div>'
-        else:
-            msg = '<div class="alert alert-err">❌ Falsch</div>'
         conn.close()
     content = f"""
     <h1>🔑 Passwort</h1>
@@ -1352,13 +1193,13 @@ def profil_2fa():
         secret = generate_2fa_secret()
         qr = generate_qr_code(session.get("username","user"), secret)
         content = f"""
-        <h1>🔐 2FA einrichten</h1>
+        <h1>🔐 2FA</h1>
         {msg}
         <div class="card">
             <div style="text-align: center; background: white; padding: 20px; border-radius: 12px;">
                 <img src="{qr}" style="max-width: 300px;">
             </div>
-            <p style="margin-top: 15px; font-family: monospace; word-break: break-all;">{secret}</p>
+            <p style="margin-top: 15px; font-family: monospace;">{secret}</p>
             <form method="POST">
                 <input type="hidden" name="action" value="enable">
                 <input type="hidden" name="secret" value="{secret}">
@@ -1403,7 +1244,6 @@ def profil_delete():
     return render_template_string(BASE_HTML, content=content, user=session)
 
 
-# Rechtliche Seiten
 @app.route("/impressum")
 def impressum():
     content = f"""
@@ -1423,9 +1263,7 @@ def datenschutz():
     content = f"""
     <h1>🔒 Datenschutz</h1>
     <div class="legal-text">
-        <p>XsiKOM DIGITAL Projects, Komi Tevi<br>{CONTACT_EMAIL}</p>
-        <h3>DSGVO Rechte</h3>
-        <p>Auskunft, Berichtigung, Loeschung, Uebertragbarkeit</p>
+        <p>XsiKOM DIGITAL Projects<br>{CONTACT_EMAIL}</p>
     </div>
     """
     return render_template_string(BASE_HTML, content=content, user=session if "user_id" in session else None)
@@ -1435,9 +1273,7 @@ def datenschutz():
 def widerruf():
     content = f"""
     <h1>↩️ Widerruf</h1>
-    <div class="legal-text">
-        <p>14 Tage Widerrufsrecht. Kontakt: {CONTACT_EMAIL}</p>
-    </div>
+    <div class="legal-text"><p>14 Tage Widerrufsrecht.</p></div>
     """
     return render_template_string(BASE_HTML, content=content, user=session if "user_id" in session else None)
 
@@ -1448,7 +1284,6 @@ def haftung():
     <h1>⚖️ Haftung</h1>
     <div class="legal-text">
         <div class="alert alert-warn">⚠️ KI-Inhalte koennen Fehler enthalten!</div>
-        <p>Keine Haftung fuer Schaeden.</p>
     </div>
     """
     return render_template_string(BASE_HTML, content=content, user=session if "user_id" in session else None)
@@ -1458,10 +1293,7 @@ def haftung():
 def agb():
     content = f"""
     <h1>📋 AGB</h1>
-    <div class="legal-text">
-        <p>Free: 5 Bewerbungen | Premium: 1.99€</p>
-        <p>Gerichtsstand: Mainz</p>
-    </div>
+    <div class="legal-text"><p>Free: 5 Bewerbungen | Premium: 1.99€</p></div>
     """
     return render_template_string(BASE_HTML, content=content, user=session if "user_id" in session else None)
 
@@ -1480,9 +1312,6 @@ def password_reset_request():
             token = create_password_reset_token(user[0])
             link = f"{request.host_url}password-reset/{token}"
             msg = f'<div class="alert alert-ok">Link: {link}</div>'
-        else:
-            msg = '<div class="alert alert-info">Email gesendet (falls existiert)</div>'
-
     content = f"""
     <div style="max-width: 450px; margin: 60px auto;">
         <div class="card">
@@ -1502,8 +1331,7 @@ def password_reset_request():
 def password_reset_new(token):
     user_id = verify_reset_token(token)
     if not user_id:
-        content = '<h1>❌ Ungueltig</h1>'
-        return render_template_string(BASE_HTML, content=content, user=None)
+        return render_template_string(BASE_HTML, content="<h1>❌ Ungueltig</h1>", user=None)
     if request.method == "POST":
         new = request.form.get("new_password","")
         if len(new) >= 8:
@@ -1564,9 +1392,9 @@ admin_anlegen()
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("  XsiKOM v4.0")
+    print("  XsiKOM v5.0 - GLOBAL")
     print(f"  KI: {'ONLINE' if GROQ_API_KEY else 'OFFLINE'}")
     print(f"  URL: http://localhost:5000")
     print("=" * 60)
     port = int(os.environ.get("PORT", 5000))
-    app.run(debug=True, host="0.0.0.0", port=port)
+    app.run(debug=False, host="0.0.0.0", port=port)
