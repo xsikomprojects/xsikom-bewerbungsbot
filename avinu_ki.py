@@ -1,6 +1,9 @@
 """
-AVINU - KI Job-Such und Bewerbungs-Bot
-Spezialist fuer ALLE Branchen!
+AVINU - KI Job-Such und Bewerbungs-Bot (ERWEITERT)
+- 6 Jobportale
+- Umkreissuche
+- 100+ Berufe pro Branche
+- Filter & Sortierung
 """
 import os
 import requests
@@ -9,44 +12,179 @@ import sqlite3
 from datetime import datetime
 from bs4 import BeautifulSoup
 import re
+import urllib.parse
 
 DB_NAME = "bewerbungen.db"
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-
-# ============================================================
-# AVINU SYSTEM PROMPT
-# ============================================================
-AVINU_PROMPT = """Du bist AVINU, ein KI-Job-Such-Experte.
-
-Deine Aufgabe:
-- Hilf bei Jobsuche in ALLEN Branchen
-- Analysiere Stellenanzeigen
-- Erstelle individuelle Anschreiben
-- Optimiere Bewerbungen
-
-Branchen-Expertise:
-- IT & Technik
-- Handwerk & Bau
-- Gesundheit & Pflege
-- Verwaltung & Buero
-- Verkauf & Handel
-- Logistik & Transport
-- Gastronomie & Hotel
-- Bildung & Soziales
-- Marketing & Medien
-- Finanzen & Banken
-
-Stil: Professionell, motivierend, konkret.
+AVINU_PROMPT = """Du bist AVINU, KI-Job-Experte.
+Hilf bei Jobsuche in ALLEN Branchen.
 Antworte auf Deutsch in 3-5 Saetzen."""
+
+
+# ============================================================
+# ALLE BERUFE PRO BRANCHE (100+ insgesamt!)
+# ============================================================
+BRANCHEN = {
+    "it": [
+        "IT-Praktikum", "Fachinformatiker Systemintegration",
+        "Fachinformatiker Anwendungsentwicklung",
+        "IT-Systemadministrator", "Netzwerkadministrator",
+        "Softwareentwickler", "Webentwickler",
+        "Frontend Developer", "Backend Developer",
+        "Full Stack Developer", "DevOps Engineer",
+        "Cloud Engineer", "Data Scientist",
+        "KI-Engineer", "Cybersecurity Spezialist",
+        "IT-Support", "Helpdesk Mitarbeiter",
+        "Systemtechniker", "Datenbank Administrator",
+        "IT-Projektmanager", "Scrum Master",
+        "Python Entwickler", "Java Entwickler",
+        "C# Entwickler", "Mobile App Entwickler",
+    ],
+    "handwerk": [
+        "Elektroniker", "Elektriker", "Anlagenmechaniker",
+        "Sanitär Heizung Klima (SHK)", "Klempner",
+        "Schreiner", "Tischler", "Zimmerer",
+        "Maurer", "Maler und Lackierer",
+        "Fliesenleger", "Dachdecker",
+        "KFZ-Mechatroniker", "Karosseriebauer",
+        "Industriemechaniker", "Werkzeugmechaniker",
+        "Metallbauer", "Schweißer",
+        "Bäcker", "Konditor", "Fleischer",
+        "Friseur", "Kosmetiker",
+        "Goldschmied", "Uhrmacher",
+    ],
+    "gesundheit": [
+        "Pflegefachmann", "Pflegefachfrau",
+        "Altenpfleger", "Krankenpfleger",
+        "Gesundheits- und Krankenpfleger",
+        "Medizinischer Fachangestellter (MFA)",
+        "Zahnmedizinischer Fachangestellter (ZFA)",
+        "Pharmazeutisch-technischer Assistent (PTA)",
+        "Physiotherapeut", "Ergotherapeut", "Logopäde",
+        "Hebamme", "Notfallsanitäter", "Rettungssanitäter",
+        "Operationstechnischer Assistent (OTA)",
+        "Anästhesietechnischer Assistent (ATA)",
+        "Heilerziehungspfleger", "Sozialassistent",
+        "Diätassistent", "Optiker", "Augenoptiker",
+    ],
+    "verwaltung": [
+        "Kaufmann für Büromanagement",
+        "Verwaltungsfachangestellter",
+        "Industriekaufmann", "Bürokaufmann",
+        "Personalsachbearbeiter", "Personalreferent",
+        "HR Manager", "Sachbearbeiter",
+        "Sekretär", "Assistent der Geschäftsleitung",
+        "Office Manager", "Empfangsmitarbeiter",
+        "Datenerfasser", "Buchhalter",
+        "Steuerfachangestellter", "Rechtsanwaltsfachangestellter",
+        "Notarfachangestellter", "Justizfachangestellter",
+        "Sozialversicherungsfachangestellter",
+    ],
+    "verkauf": [
+        "Verkäufer", "Kaufmann im Einzelhandel",
+        "Kaufmann im Großhandel",
+        "Filialleiter", "Verkaufsleiter",
+        "Vertriebsmitarbeiter", "Außendienstmitarbeiter",
+        "Account Manager", "Key Account Manager",
+        "Sales Manager", "Kundenberater",
+        "Kassierer", "Warenverräumer",
+        "Drogist", "Buchhändler", "Apotheker",
+        "Immobilienmakler", "Versicherungsvertreter",
+        "Bankberater", "Finanzberater",
+    ],
+    "logistik": [
+        "Fachlagerist", "Fachkraft für Lagerlogistik",
+        "Lagermitarbeiter", "Kommissionierer",
+        "Berufskraftfahrer", "LKW-Fahrer", "Auslieferungsfahrer",
+        "Speditionskaufmann", "Disponent",
+        "Logistikleiter", "Supply Chain Manager",
+        "Versandmitarbeiter", "Staplerfahrer",
+        "Postbote", "Paketzusteller", "Kurier",
+        "Bahnmitarbeiter", "Flugbegleiter",
+        "Pilot", "Schiffsführer",
+    ],
+    "gastronomie": [
+        "Koch", "Beikoch", "Küchenhilfe",
+        "Restaurantfachmann", "Kellner", "Servicekraft",
+        "Barkeeper", "Sommelier",
+        "Hotelfachmann", "Hotelmanager",
+        "Empfangsmitarbeiter Hotel", "Concierge",
+        "Housekeeping", "Zimmermädchen",
+        "Eventmanager", "Catering Mitarbeiter",
+        "Pizzabäcker", "Bäcker im Hotel",
+        "Patissier", "Restaurantleiter",
+    ],
+    "bildung": [
+        "Erzieher", "Kinderpfleger", "Sozialpädagoge",
+        "Sozialarbeiter", "Heilpädagoge",
+        "Grundschullehrer", "Gymnasiallehrer",
+        "Berufsschullehrer", "Förderschullehrer",
+        "Dozent", "Trainer", "Coach",
+        "Bibliothekar", "Museumspädagoge",
+        "Tagesmutter", "Au-pair",
+        "Sportlehrer", "Musiklehrer",
+        "Sprachlehrer", "Nachhilfelehrer",
+    ],
+    "marketing": [
+        "Marketing Manager", "Online Marketing Manager",
+        "Social Media Manager", "Content Manager",
+        "SEO Spezialist", "SEA Spezialist",
+        "Performance Marketing Manager",
+        "Brand Manager", "Product Manager",
+        "Copywriter", "Texter", "Redakteur",
+        "Grafikdesigner", "UI/UX Designer",
+        "Webdesigner", "Mediengestalter",
+        "Fotograf", "Videograf", "Cutter",
+        "PR Manager", "Eventmanager",
+    ],
+    "finanzen": [
+        "Bankkaufmann", "Sparkassenkaufmann",
+        "Investmentbanker", "Finanzberater",
+        "Anlageberater", "Vermögensberater",
+        "Versicherungskaufmann", "Versicherungsmakler",
+        "Steuerberater", "Wirtschaftsprüfer",
+        "Buchhalter", "Bilanzbuchhalter",
+        "Controller", "Finanzanalyst",
+        "Risikomanager", "Treasury Manager",
+        "Kreditberater", "Immobilienfinanzierer",
+        "Rentenberater", "Versicherungsmathematiker",
+    ],
+    "transport": [
+        "LKW-Fahrer", "Busfahrer", "Taxifahrer",
+        "Berufskraftfahrer", "Auslieferungsfahrer",
+        "Spediteur", "Disponent",
+        "Logistiker", "Versandmitarbeiter",
+        "Hafenarbeiter", "Bahnmitarbeiter",
+    ],
+    "produktion": [
+        "Produktionsmitarbeiter", "Maschinenbediener",
+        "Industriemechaniker", "Verfahrensmechaniker",
+        "Fertigungstechniker", "Qualitätskontrolleur",
+        "Werker", "Helfer Produktion",
+        "Schichtleiter", "Produktionsleiter",
+        "CNC-Fräser", "Zerspanungsmechaniker",
+    ],
+    "reinigung": [
+        "Reinigungskraft", "Gebäudereiniger",
+        "Hausmeister", "Facility Manager",
+        "Glasreiniger", "Industriereiniger",
+        "Hotelreinigung", "Krankenhausreiniger",
+    ],
+    "sicherheit": [
+        "Sicherheitsmitarbeiter", "Wachmann",
+        "Pförtner", "Werkschutz",
+        "Personenschützer", "Geldtransporter",
+        "Detektiv", "Polizist",
+    ],
+}
 
 
 # ============================================================
 # DATENBANK SETUP
 # ============================================================
 def avinu_db_init():
-    """Erstellt AVINU Tabellen."""
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     
@@ -64,7 +202,9 @@ def avinu_db_init():
             quelle TEXT,
             gefunden TEXT,
             beworben INTEGER DEFAULT 0,
-            bewerbung_datum TEXT
+            bewerbung_datum TEXT,
+            favorit INTEGER DEFAULT 0,
+            entfernung INTEGER DEFAULT 0
         )
     """)
     
@@ -93,271 +233,59 @@ def avinu_db_init():
     """)
     
     conn.commit()
-    
-    # Standard Vorlagen einfügen
     standard_vorlagen_einfuegen()
     conn.close()
 
 
 def standard_vorlagen_einfuegen():
-    """Fuegt 10 Premium Vorlagen ein."""
+    """10 Premium Vorlagen."""
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    
     c.execute("SELECT COUNT(*) FROM anschreiben_vorlagen")
     if c.fetchone()[0] > 0:
         conn.close()
         return
     
     vorlagen = [
-        {
-            "name": "Klassisch Professionell",
-            "beschreibung": "Klassische, formelle Bewerbung",
-            "branche": "Alle",
-            "premium": 0,
-            "template": """Sehr geehrte Damen und Herren,
-
-mit grossem Interesse habe ich Ihre Stellenausschreibung als {position} bei {firma} gelesen. 
-Hiermit moechte ich mich um diese Position bewerben.
-
-{einleitung}
-
-{hauptteil}
-
-{schluss}
-
-Ueber eine Einladung zu einem persoenlichen Gespraech freue ich mich sehr.
-
-Mit freundlichen Gruessen
-{name}"""
-        },
-        {
-            "name": "Modern & Dynamisch",
-            "beschreibung": "Moderner Stil fuer junge Unternehmen",
-            "branche": "IT, Marketing",
-            "premium": 1,
-            "template": """Hallo {ansprechpartner},
-
-als ich Ihre Stellenanzeige fuer {position} entdeckt habe, wusste ich sofort: Das ist meine Chance!
-
-{einleitung}
-
-{hauptteil}
-
-Was ich bei {firma} besonders schaetze: {firma_referenz}
-
-{schluss}
-
-Lassen Sie uns gerne sprechen - ich freue mich auf Ihre Antwort!
-
-Beste Gruesse
-{name}"""
-        },
-        {
-            "name": "Karrierewechsel",
-            "beschreibung": "Fuer Branchenwechsler",
-            "branche": "Alle",
-            "premium": 1,
-            "template": """Sehr geehrte Damen und Herren,
-
-mein bisheriger beruflicher Weg hat mich gelehrt, dass neue Herausforderungen den groessten Mehrwert schaffen. Die Position {position} bei {firma} ist genau diese Herausforderung.
-
-{einleitung}
-
-Meine bisherigen Erfahrungen sind ein wertvolles Plus:
-{hauptteil}
-
-{schluss}
-
-Ich bringe Mut, Lernbereitschaft und frische Perspektiven mit. Ueber ein Gespraech freue ich mich.
-
-Mit freundlichen Gruessen
-{name}"""
-        },
-        {
-            "name": "Berufseinstieg",
-            "beschreibung": "Fuer Berufseinsteiger und Praktikanten",
-            "branche": "Alle",
-            "premium": 0,
-            "template": """Sehr geehrte Damen und Herren,
-
-mit Begeisterung bewerbe ich mich auf die ausgeschriebene Stelle als {position}. Ihr Unternehmen ist fuer mich der ideale Einstieg in meinen Wunschberuf.
-
-{einleitung}
-
-Was ich mitbringe:
-{hauptteil}
-
-{schluss}
-
-Auch wenn ich am Anfang meiner Karriere stehe, bringe ich viel Motivation und Lernwillen mit. Ich freue mich auf ein Gespraech!
-
-Mit freundlichen Gruessen
-{name}"""
-        },
-        {
-            "name": "IT & Tech Spezialist",
-            "beschreibung": "Fuer IT Positionen",
-            "branche": "IT",
-            "premium": 1,
-            "template": """Sehr geehrte Damen und Herren,
-
-als technologiebegeisterter {position} habe ich Ihre Stelle bei {firma} mit grossem Interesse gelesen.
-
-{einleitung}
-
-Meine technischen Skills:
-{hauptteil}
-
-Was mich besonders interessiert: Die innovativen Projekte bei {firma}, insbesondere {firma_referenz}.
-
-{schluss}
-
-Ich freue mich auf ein technisches Gespraech und die Moeglichkeit, gemeinsam etwas zu bewegen!
-
-Mit freundlichen Gruessen
-{name}"""
-        },
-        {
-            "name": "Fuehrungskraft",
-            "beschreibung": "Fuer Manager und Fuehrungsrollen",
-            "branche": "Management",
-            "premium": 1,
-            "template": """Sehr geehrte Damen und Herren,
-
-mit ueber {jahre} Jahren Fuehrungserfahrung bewerbe ich mich um die Position {position} in Ihrem Hause.
-
-{einleitung}
-
-Meine Fuehrungsstaerken:
-{hauptteil}
-
-In meinen bisherigen Stationen konnte ich erfolgreich {erfolg} erreichen.
-
-{schluss}
-
-Ein persoenliches Gespraech ueber Ihre strategischen Ziele wuerde mich sehr freuen.
-
-Mit freundlichen Gruessen
-{name}"""
-        },
-        {
-            "name": "Kreativ & Originell",
-            "beschreibung": "Fuer Kreativbranche",
-            "branche": "Marketing, Design",
-            "premium": 1,
-            "template": """Hallo {firma}-Team!
-
-Ihre Stellenanzeige hat mich auf Anhieb begeistert - und ich bin sicher: Wir passen zusammen!
-
-{einleitung}
-
-Warum ich der richtige bin:
-{hauptteil}
-
-Meine Vision fuer diese Position: {vision}
-
-{schluss}
-
-Ich brenne darauf, gemeinsam mit Ihrem Team kreative Loesungen zu entwickeln. Wann koennen wir reden?
-
-Kreative Gruesse
-{name}"""
-        },
-        {
-            "name": "Handwerk & Praktisch",
-            "beschreibung": "Fuer Handwerksberufe",
-            "branche": "Handwerk",
-            "premium": 0,
-            "template": """Sehr geehrte Damen und Herren,
-
-mit grossem Interesse bewerbe ich mich auf die ausgeschriebene Stelle als {position}.
-
-{einleitung}
-
-Meine Qualifikationen:
-{hauptteil}
-
-Bei Ihnen schaetze ich besonders: {firma_referenz}
-
-{schluss}
-
-Ueber eine Einladung zum Vorstellungsgespraech und eventuell einer Probearbeit freue ich mich sehr.
-
-Mit freundlichen Gruessen
-{name}"""
-        },
-        {
-            "name": "Gesundheit & Pflege",
-            "beschreibung": "Fuer Gesundheitsberufe",
-            "branche": "Gesundheit",
-            "premium": 1,
-            "template": """Sehr geehrte Damen und Herren,
-
-Menschen zu helfen ist meine Berufung - deshalb bewerbe ich mich mit grosser Freude um die Stelle als {position} bei {firma}.
-
-{einleitung}
-
-Meine fachlichen und menschlichen Qualifikationen:
-{hauptteil}
-
-Bei Ihnen schaetze ich besonders die patientenorientierte Arbeitsweise.
-
-{schluss}
-
-Ueber die Moeglichkeit eines persoenlichen Gespraechs freue ich mich sehr.
-
-Mit freundlichen Gruessen
-{name}"""
-        },
-        {
-            "name": "Premium Executive",
-            "beschreibung": "Hochwertig fuer Top-Positionen",
-            "branche": "Executive",
-            "premium": 1,
-            "template": """Sehr geehrte Damen und Herren,
-
-mit groesstem Interesse habe ich Ihre Ausschreibung fuer die Position {position} bei {firma} zur Kenntnis genommen.
-
-{einleitung}
-
-Was ich Ihrem Unternehmen biete:
-{hauptteil}
-
-Mein bisheriger Karriereweg dokumentiert nachhaltige Erfolge in {erfolg}. Diese Expertise moechte ich gewinnbringend bei {firma} einsetzen.
-
-{schluss}
-
-Ich bin ueberzeugt, dass meine Erfahrung und Vision optimal zu Ihren strategischen Zielen passen. Auf ein persoenliches Kennenlernen freue ich mich.
-
-Mit besten Gruessen
-{name}"""
-        },
+        ("Klassisch Professionell", "Klassische Bewerbung", 0, "Alle",
+         "Sehr geehrte Damen und Herren,\n\nmit Interesse habe ich Ihre Stellenanzeige als {position} bei {firma} gelesen. Hiermit moechte ich mich bewerben.\n\n{einleitung}\n{hauptteil}\n{schluss}\n\nMit freundlichen Gruessen\n{name}"),
+        ("Modern & Dynamisch", "Moderner Stil", 1, "IT, Marketing",
+         "Hallo {ansprechpartner},\n\nIhre Stellenanzeige fuer {position} hat mich begeistert!\n\n{einleitung}\n{hauptteil}\n\nLassen Sie uns sprechen!\n\nBeste Gruesse\n{name}"),
+        ("Berufseinstieg", "Fuer Anfaenger", 0, "Alle",
+         "Sehr geehrte Damen und Herren,\n\nmit Begeisterung bewerbe ich mich als {position}.\n\n{einleitung}\n{hauptteil}\n{schluss}\n\nIch freue mich auf ein Gespraech!\n\nMit freundlichen Gruessen\n{name}"),
+        ("IT Spezialist", "Fuer IT-Jobs", 1, "IT",
+         "Sehr geehrte Damen und Herren,\n\nals technologiebegeisterter {position} bewerbe ich mich bei {firma}.\n\n{einleitung}\nTechnische Skills:\n{hauptteil}\n\nIch freue mich auf das Gespraech!\n\nMit freundlichen Gruessen\n{name}"),
+        ("Karrierewechsel", "Fuer Branchenwechsler", 1, "Alle",
+         "Sehr geehrte Damen und Herren,\n\nNeue Herausforderungen schaffen Mehrwert - die Position {position} bei {firma} ist genau das.\n\n{einleitung}\n{hauptteil}\n{schluss}\n\nMit freundlichen Gruessen\n{name}"),
+        ("Handwerk Praktisch", "Fuer Handwerker", 0, "Handwerk",
+         "Sehr geehrte Damen und Herren,\n\nmit Interesse bewerbe ich mich als {position}.\n\n{einleitung}\nMeine Qualifikationen:\n{hauptteil}\n\nUeber Probearbeit freue ich mich.\n\nMit freundlichen Gruessen\n{name}"),
+        ("Gesundheit & Pflege", "Fuer Pflegeberufe", 1, "Gesundheit",
+         "Sehr geehrte Damen und Herren,\n\nMenschen helfen ist meine Berufung. Daher bewerbe ich mich als {position} bei {firma}.\n\n{einleitung}\n{hauptteil}\n{schluss}\n\nMit freundlichen Gruessen\n{name}"),
+        ("Fuehrungskraft", "Fuer Manager", 1, "Management",
+         "Sehr geehrte Damen und Herren,\n\nmit Fuehrungserfahrung bewerbe ich mich um die Position {position}.\n\n{einleitung}\nFuehrungsstaerken:\n{hauptteil}\n\nMit besten Gruessen\n{name}"),
+        ("Kreativ & Originell", "Kreativbranche", 1, "Marketing",
+         "Hallo {firma}-Team!\n\nIhre Stellenanzeige hat mich begeistert!\n\n{einleitung}\nWarum ich passe:\n{hauptteil}\n\nWann reden wir?\n\nKreative Gruesse\n{name}"),
+        ("Premium Executive", "Top-Positionen", 1, "Executive",
+         "Sehr geehrte Damen und Herren,\n\nmit groesstem Interesse habe ich Ihre Ausschreibung fuer {position} gelesen.\n\n{einleitung}\nMein Beitrag:\n{hauptteil}\n\nMit besten Gruessen\n{name}"),
     ]
     
     for v in vorlagen:
         c.execute("""
             INSERT INTO anschreiben_vorlagen 
-            (name, beschreibung, template, premium, branche)
+            (name, beschreibung, premium, branche, template)
             VALUES (?, ?, ?, ?, ?)
-        """, (v["name"], v["beschreibung"], v["template"], v["premium"], v["branche"]))
+        """, v)
     
     conn.commit()
     conn.close()
 
 
 # ============================================================
-# AVINU KI ANTWORTEN
+# AVINU KI
 # ============================================================
-def avinu_antwort(frage, kontext=""):
-    """Holt eine Antwort von AVINU."""
+def avinu_antwort(frage):
     if not GROQ_API_KEY:
-        return "AVINU ist gerade offline. Bitte versuche es spaeter."
-    
-    full_frage = frage
-    if kontext:
-        full_frage = f"Kontext: {kontext}\n\nFrage: {frage}"
-    
+        return "AVINU offline."
     try:
         response = requests.post(
             GROQ_URL,
@@ -369,7 +297,7 @@ def avinu_antwort(frage, kontext=""):
                 "model": "llama-3.3-70b-versatile",
                 "messages": [
                     {"role": "system", "content": AVINU_PROMPT},
-                    {"role": "user", "content": full_frage}
+                    {"role": "user", "content": frage}
                 ],
                 "temperature": 0.7,
                 "max_tokens": 1000
@@ -378,107 +306,308 @@ def avinu_antwort(frage, kontext=""):
         )
         if response.status_code == 200:
             return response.json()["choices"][0]["message"]["content"]
-        return "AVINU hat ein Problem. Bitte spaeter probieren."
+        return "Fehler bei AVINU."
     except Exception:
-        return "Verbindung zu AVINU fehlgeschlagen."
+        return "Verbindung fehlgeschlagen."
 
 
 # ============================================================
-# JOB SUCHE
+# JOB-SUCHE - 6 PORTALE!
 # ============================================================
-BRANCHEN = {
-    "it": ["IT", "Informatik", "Software", "Netzwerk", "Programmierer", "Fachinformatiker"],
-    "handwerk": ["Handwerk", "Elektriker", "Klempner", "Maurer", "Schreiner", "Mechaniker"],
-    "gesundheit": ["Pflege", "Arzt", "Krankenschwester", "Therapeut", "Gesundheit"],
-    "verwaltung": ["Verwaltung", "Buero", "Sekretariat", "Sachbearbeiter", "Assistent"],
-    "verkauf": ["Verkauf", "Einzelhandel", "Verkaeufer", "Kassierer", "Handel"],
-    "logistik": ["Logistik", "Lager", "Lagerist", "Fahrer", "Disponent"],
-    "gastronomie": ["Gastronomie", "Koch", "Kellner", "Hotelfach", "Bedienung"],
-    "bildung": ["Lehrer", "Erzieher", "Sozialpaedagoge", "Bildung", "Trainer"],
-    "marketing": ["Marketing", "Werbung", "Social Media", "PR", "Content"],
-    "finanzen": ["Banker", "Buchhaltung", "Finanzen", "Steuerberater", "Controlling"],
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
 }
 
 
-def jobs_suchen_indeed(suchbegriff, standort, anzahl=10):
-    """Sucht Jobs auf Indeed."""
+def jobs_suchen_indeed(suchbegriff, standort, radius=25, anzahl=15):
+    """Indeed mit Umkreissuche."""
     jobs = []
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-    }
-    
     try:
-        url = f"https://de.indeed.com/jobs?q={suchbegriff}&l={standort}"
-        r = requests.get(url, headers=headers, timeout=10)
+        q = urllib.parse.quote(suchbegriff)
+        l = urllib.parse.quote(standort)
+        url = f"https://de.indeed.com/jobs?q={q}&l={l}&radius={radius}"
+        
+        r = requests.get(url, headers=HEADERS, timeout=15)
         soup = BeautifulSoup(r.text, "html.parser")
         
-        cards = soup.find_all("div", class_=re.compile("job_seen"))[:anzahl]
+        # Verschiedene Selektoren probieren
+        cards = (soup.find_all("div", class_=re.compile("job_seen_beacon")) or
+                 soup.find_all("div", class_=re.compile("jobsearch-SerpJobCard")) or
+                 soup.find_all("a", class_=re.compile("tapItem")))
         
-        for card in cards:
+        for card in cards[:anzahl]:
             try:
-                titel_elem = card.find("h2")
-                firma_elem = card.find("span", class_=re.compile("company"))
-                ort_elem = card.find("div", class_=re.compile("location"))
+                titel = ""
+                titel_elem = card.find("h2") or card.find("a", {"data-jk": True})
+                if titel_elem:
+                    titel = titel_elem.get_text(strip=True)
                 
-                if titel_elem and firma_elem:
-                    job = {
-                        "titel": titel_elem.get_text(strip=True),
-                        "firma": firma_elem.get_text(strip=True),
-                        "standort": ort_elem.get_text(strip=True) if ort_elem else standort,
-                        "quelle": "Indeed",
-                        "url": "https://de.indeed.com" + (card.find("a")["href"] if card.find("a") else "")
-                    }
-                    jobs.append(job)
+                firma = "Unbekannt"
+                firma_elem = (card.find("span", class_=re.compile("companyName")) or
+                              card.find("div", class_=re.compile("company")))
+                if firma_elem:
+                    firma = firma_elem.get_text(strip=True)
+                
+                ort = standort
+                ort_elem = card.find("div", class_=re.compile("companyLocation"))
+                if ort_elem:
+                    ort = ort_elem.get_text(strip=True)
+                
+                beschreibung = ""
+                desc_elem = card.find("div", class_=re.compile("job-snippet"))
+                if desc_elem:
+                    beschreibung = desc_elem.get_text(strip=True)[:300]
+                
+                link = ""
+                link_elem = card.find("a", href=True)
+                if link_elem:
+                    link = "https://de.indeed.com" + link_elem.get("href", "")
+                
+                if titel:
+                    jobs.append({
+                        "titel": titel, "firma": firma,
+                        "standort": ort, "beschreibung": beschreibung,
+                        "url": link, "quelle": "Indeed"
+                    })
             except Exception:
                 continue
-                
     except Exception as e:
         print(f"Indeed Fehler: {e}")
     
     return jobs
 
 
-def jobs_suchen_arbeitsagentur(suchbegriff, standort, anzahl=10):
-    """Sucht Jobs bei Bundesagentur fuer Arbeit."""
+def jobs_suchen_arbeitsagentur(suchbegriff, standort, radius=25, anzahl=15):
+    """Arbeitsagentur API."""
     jobs = []
     try:
-        url = f"https://www.arbeitsagentur.de/jobsuche/suche?was={suchbegriff}&wo={standort}"
-        r = requests.get(url, timeout=10)
+        url = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/jobs"
+        params = {
+            "was": suchbegriff,
+            "wo": standort,
+            "umkreis": radius,
+            "size": anzahl
+        }
+        headers = {
+            "X-API-Key": "jobboerse-jobsuche",
+            "User-Agent": HEADERS["User-Agent"]
+        }
+        
+        r = requests.get(url, params=params, headers=headers, timeout=15)
+        if r.status_code == 200:
+            data = r.json()
+            for stellen in data.get("stellenangebote", [])[:anzahl]:
+                try:
+                    jobs.append({
+                        "titel": stellen.get("titel", ""),
+                        "firma": stellen.get("arbeitgeber", "Unbekannt"),
+                        "standort": stellen.get("arbeitsort", {}).get("ort", standort),
+                        "beschreibung": stellen.get("beruf", "")[:300],
+                        "url": f"https://www.arbeitsagentur.de/jobsuche/jobdetail/{stellen.get('refnr', '')}",
+                        "quelle": "Arbeitsagentur"
+                    })
+                except Exception:
+                    continue
+    except Exception as e:
+        print(f"Arbeitsagentur Fehler: {e}")
+    
+    return jobs
+
+
+def jobs_suchen_stepstone(suchbegriff, standort, radius=25, anzahl=10):
+    """StepStone Scraper."""
+    jobs = []
+    try:
+        q = urllib.parse.quote(suchbegriff)
+        l = urllib.parse.quote(standort)
+        url = f"https://www.stepstone.de/jobs/{q}/in-{l}"
+        
+        r = requests.get(url, headers=HEADERS, timeout=15)
         soup = BeautifulSoup(r.text, "html.parser")
         
-        cards = soup.find_all("div", class_=re.compile("jobtile"))[:anzahl]
+        articles = soup.find_all("article")[:anzahl]
         
-        for card in cards:
+        for art in articles:
             try:
-                titel = card.find("h2")
-                firma = card.find("p", class_=re.compile("company"))
+                titel = ""
+                titel_elem = art.find(["h2", "h3"])
+                if titel_elem:
+                    titel = titel_elem.get_text(strip=True)
+                
+                firma = "Unbekannt"
+                firma_elem = art.find("span", class_=re.compile("company"))
+                if firma_elem:
+                    firma = firma_elem.get_text(strip=True)
+                
+                link = ""
+                link_elem = art.find("a", href=True)
+                if link_elem:
+                    link = "https://www.stepstone.de" + link_elem["href"]
                 
                 if titel:
-                    job = {
-                        "titel": titel.get_text(strip=True),
-                        "firma": firma.get_text(strip=True) if firma else "Unbekannt",
-                        "standort": standort,
-                        "quelle": "Arbeitsagentur",
-                        "url": ""
-                    }
-                    jobs.append(job)
+                    jobs.append({
+                        "titel": titel, "firma": firma,
+                        "standort": standort, "beschreibung": "",
+                        "url": link, "quelle": "StepStone"
+                    })
             except Exception:
                 continue
-                
     except Exception:
         pass
     
     return jobs
 
 
-def jobs_speichern(user_id, jobs, branche=""):
-    """Speichert gefundene Jobs in DB."""
+def jobs_suchen_xing(suchbegriff, standort, anzahl=10):
+    """Xing Jobs."""
+    jobs = []
+    try:
+        q = urllib.parse.quote(suchbegriff)
+        l = urllib.parse.quote(standort)
+        url = f"https://www.xing.com/jobs/search?keywords={q}&location={l}"
+        
+        r = requests.get(url, headers=HEADERS, timeout=15)
+        soup = BeautifulSoup(r.text, "html.parser")
+        
+        cards = soup.find_all("article")[:anzahl]
+        
+        for card in cards:
+            try:
+                titel = card.find(["h2", "h3", "a"])
+                if titel:
+                    jobs.append({
+                        "titel": titel.get_text(strip=True),
+                        "firma": "via XING",
+                        "standort": standort,
+                        "beschreibung": "",
+                        "url": "https://www.xing.com/jobs",
+                        "quelle": "XING"
+                    })
+            except Exception:
+                continue
+    except Exception:
+        pass
+    
+    return jobs
+
+
+def jobs_suchen_meinestadt(suchbegriff, standort, anzahl=10):
+    """meinestadt.de."""
+    jobs = []
+    try:
+        q = urllib.parse.quote(suchbegriff)
+        l = urllib.parse.quote(standort.lower())
+        url = f"https://jobs.meinestadt.de/{l}/suche?words={q}"
+        
+        r = requests.get(url, headers=HEADERS, timeout=15)
+        soup = BeautifulSoup(r.text, "html.parser")
+        
+        cards = soup.find_all("article")[:anzahl]
+        
+        for card in cards:
+            try:
+                titel_elem = card.find(["h2", "h3"])
+                if titel_elem:
+                    jobs.append({
+                        "titel": titel_elem.get_text(strip=True),
+                        "firma": "Lokal",
+                        "standort": standort,
+                        "beschreibung": "",
+                        "url": "https://jobs.meinestadt.de",
+                        "quelle": "meinestadt"
+                    })
+            except Exception:
+                continue
+    except Exception:
+        pass
+    
+    return jobs
+
+
+def jobs_suchen_kimeta(suchbegriff, standort, anzahl=10):
+    """Kimeta."""
+    jobs = []
+    try:
+        q = urllib.parse.quote(suchbegriff)
+        l = urllib.parse.quote(standort)
+        url = f"https://www.kimeta.de/stellenangebote/jobs?q={q}&loc={l}"
+        
+        r = requests.get(url, headers=HEADERS, timeout=15)
+        soup = BeautifulSoup(r.text, "html.parser")
+        
+        cards = soup.find_all("article")[:anzahl]
+        
+        for card in cards:
+            try:
+                titel_elem = card.find(["h2", "h3"])
+                if titel_elem:
+                    jobs.append({
+                        "titel": titel_elem.get_text(strip=True),
+                        "firma": "via Kimeta",
+                        "standort": standort,
+                        "beschreibung": "",
+                        "url": "https://www.kimeta.de",
+                        "quelle": "Kimeta"
+                    })
+            except Exception:
+                continue
+    except Exception:
+        pass
+    
+    return jobs
+
+
+def alle_jobs_suchen(suchbegriff, standort, radius=25):
+    """Sucht in ALLEN Portalen parallel."""
+    alle_jobs = []
+    
+    # Indeed
+    try:
+        alle_jobs.extend(jobs_suchen_indeed(suchbegriff, standort, radius, 15))
+    except Exception:
+        pass
+    
+    # Arbeitsagentur
+    try:
+        alle_jobs.extend(jobs_suchen_arbeitsagentur(suchbegriff, standort, radius, 15))
+    except Exception:
+        pass
+    
+    # StepStone
+    try:
+        alle_jobs.extend(jobs_suchen_stepstone(suchbegriff, standort, radius, 10))
+    except Exception:
+        pass
+    
+    # Xing
+    try:
+        alle_jobs.extend(jobs_suchen_xing(suchbegriff, standort, 10))
+    except Exception:
+        pass
+    
+    # meinestadt
+    try:
+        alle_jobs.extend(jobs_suchen_meinestadt(suchbegriff, standort, 10))
+    except Exception:
+        pass
+    
+    # Kimeta
+    try:
+        alle_jobs.extend(jobs_suchen_kimeta(suchbegriff, standort, 10))
+    except Exception:
+        pass
+    
+    return alle_jobs
+
+
+def jobs_speichern(user_id, jobs, branche="", radius=25):
+    """Speichert Jobs."""
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     gespeichert = 0
     
     for job in jobs:
-        # Duplikat-Check
         c.execute(
             "SELECT id FROM jobs WHERE user_id=? AND firma=? AND position=?",
             (user_id, job.get("firma", ""), job.get("titel", ""))
@@ -488,19 +617,14 @@ def jobs_speichern(user_id, jobs, branche=""):
         
         c.execute("""
             INSERT INTO jobs (
-                user_id, firma, position, standort, 
-                beschreibung, url, branche, quelle, gefunden
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                user_id, firma, position, standort, beschreibung,
+                url, branche, quelle, gefunden, entfernung
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            user_id,
-            job.get("firma", ""),
-            job.get("titel", ""),
-            job.get("standort", ""),
-            job.get("beschreibung", ""),
-            job.get("url", ""),
-            branche,
-            job.get("quelle", ""),
-            datetime.now().isoformat()
+            user_id, job.get("firma", ""), job.get("titel", ""),
+            job.get("standort", ""), job.get("beschreibung", ""),
+            job.get("url", ""), branche, job.get("quelle", ""),
+            datetime.now().isoformat(), radius
         ))
         gespeichert += 1
     
@@ -509,112 +633,122 @@ def jobs_speichern(user_id, jobs, branche=""):
     return gespeichert
 
 
-def jobs_laden(user_id, nur_offen=False):
-    """Laedt gespeicherte Jobs."""
+def jobs_laden(user_id, filter_typ="alle"):
+    """Laedt Jobs mit Filter."""
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     
-    if nur_offen:
-        c.execute(
-            "SELECT * FROM jobs WHERE user_id=? AND beworben=0 ORDER BY id DESC",
-            (user_id,)
-        )
+    if filter_typ == "offen":
+        c.execute("SELECT * FROM jobs WHERE user_id=? AND beworben=0 ORDER BY id DESC", (user_id,))
+    elif filter_typ == "beworben":
+        c.execute("SELECT * FROM jobs WHERE user_id=? AND beworben=1 ORDER BY id DESC", (user_id,))
+    elif filter_typ == "favoriten":
+        c.execute("SELECT * FROM jobs WHERE user_id=? AND favorit=1 ORDER BY id DESC", (user_id,))
     else:
-        c.execute(
-            "SELECT * FROM jobs WHERE user_id=? ORDER BY id DESC LIMIT 50",
-            (user_id,)
-        )
+        c.execute("SELECT * FROM jobs WHERE user_id=? ORDER BY id DESC LIMIT 100", (user_id,))
     
     rows = c.fetchall()
     conn.close()
     return rows
 
 
-def vorlagen_laden(premium=False):
-    """Laedt Anschreiben-Vorlagen."""
+def job_favorit_toggle(job_id, user_id):
+    """Toggle Favorit."""
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    
+    c.execute("SELECT favorit FROM jobs WHERE id=? AND user_id=?", (job_id, user_id))
+    r = c.fetchone()
+    if r:
+        new_val = 0 if r[0] else 1
+        c.execute("UPDATE jobs SET favorit=? WHERE id=?", (new_val, job_id))
+        conn.commit()
+    conn.close()
+
+
+def job_loeschen(job_id, user_id):
+    """Loescht Job."""
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("DELETE FROM jobs WHERE id=? AND user_id=?", (job_id, user_id))
+    conn.commit()
+    conn.close()
+
+
+def vorlagen_laden(premium=False):
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
     if premium:
         c.execute("SELECT * FROM anschreiben_vorlagen ORDER BY premium, name")
     else:
         c.execute("SELECT * FROM anschreiben_vorlagen WHERE premium=0 ORDER BY name")
-    
     rows = c.fetchall()
     conn.close()
     return rows
 
 
 def anschreiben_generieren(job_id, user_id, vorlage_id, user_profil):
-    """Generiert ein individuelles Anschreiben mit KI."""
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    
-    # Job laden
     c.execute("SELECT * FROM jobs WHERE id=? AND user_id=?", (job_id, user_id))
     job = c.fetchone()
-    
-    # Vorlage laden
     c.execute("SELECT * FROM anschreiben_vorlagen WHERE id=?", (vorlage_id,))
     vorlage = c.fetchone()
-    
     conn.close()
     
     if not job or not vorlage:
         return None
     
-    # KI-Prompt erstellen
-    prompt = f"""Erstelle ein professionelles Anschreiben fuer:
+    prompt = f"""Erstelle professionelles Anschreiben fuer:
 
 Firma: {job[2]}
 Position: {job[3]}
 Standort: {job[4]}
 Branche: {job[8]}
+Beschreibung: {job[5][:200] if job[5] else ''}
 
-Bewerber-Profil:
+Bewerber:
 Name: {user_profil.get('vorname', '')} {user_profil.get('nachname', '')}
+Adresse: {user_profil.get('strasse', '')}, {user_profil.get('plz', '')} {user_profil.get('stadt', '')}
+E-Mail: {user_profil.get('email', '')}
 Kenntnisse: {user_profil.get('kenntnisse', '')}
 Sprachen: {user_profil.get('sprachen', '')}
 
-Vorlage Style: {vorlage[1]}
+Style: {vorlage[2]}
 
-Erstelle ein vollstaendiges, ueberzeugendes Anschreiben.
-Verwende konkrete Bezuege zum Unternehmen.
-Maximal 250 Woerter.
-Auf Deutsch."""
+Erstelle vollstaendiges Anschreiben mit:
+- Anrede
+- Einleitung mit Bezug zur Firma
+- Hauptteil mit Qualifikationen
+- Abschluss mit Gespraechswunsch
+- Gruss
+
+Max 300 Woerter. Deutsch."""
     
     return avinu_antwort(prompt)
 
 
 def auto_bewerbung_erstellen(user_id, job_id, anschreiben):
-    """Speichert eine Auto-Bewerbung."""
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    
     c.execute("""
-        INSERT INTO auto_bewerbungen 
-        (user_id, job_id, anschreiben, erstellt_am)
+        INSERT INTO auto_bewerbungen (user_id, job_id, anschreiben, erstellt_am)
         VALUES (?, ?, ?, ?)
     """, (user_id, job_id, anschreiben, datetime.now().isoformat()))
-    
     bewerbung_id = c.lastrowid
-    
-    # Job als beworben markieren
-    c.execute(
-        "UPDATE jobs SET beworben=1, bewerbung_datum=? WHERE id=?",
-        (datetime.now().isoformat(), job_id)
-    )
-    
+    c.execute("UPDATE jobs SET beworben=1, bewerbung_datum=? WHERE id=?",
+              (datetime.now().isoformat(), job_id))
     conn.commit()
     conn.close()
     return bewerbung_id
 
 
+def get_alle_berufe():
+    """Gibt alle Berufe alphabetisch zurueck."""
+    alle = []
+    for berufe in BRANCHEN.values():
+        alle.extend(berufe)
+    return sorted(set(alle))
+
+
 # Init
 avinu_db_init()
-
-
-if __name__ == "__main__":
-    print("AVINU KI Bot - Test")
-    print(f"KI: {'ONLINE' if GROQ_API_KEY else 'OFFLINE'}")
-    print(f"Branchen: {len(BRANCHEN)}")
