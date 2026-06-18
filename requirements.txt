@@ -10,3 +10,4 @@ tabulate
 pyotp
 qrcode
 cryptography
+stripe

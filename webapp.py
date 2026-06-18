@@ -8,6 +8,9 @@ import hashlib
 import secrets
 import random
 import requests
+import stripe
+stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
+STRIPE_PRICE = os.environ.get("STRIPE_PRICE_MONAT", "")
 import json as json_module
 from datetime import datetime, timedelta
 from flask import (
@@ -1025,6 +1028,7 @@ def premium():
 def aktivieren():
     if "user_id" not in session:
         return redirect("/login")
+    
     msg = ""
     if request.method == "POST":
         code = request.form.get("code", "").strip()
@@ -1039,19 +1043,80 @@ def aktivieren():
             return render_template_string(BASE_HTML, content=content, user=session)
         else:
             msg = '<div class="alert alert-err">❌ Falscher Code!</div>'
-
+    
+    # Stripe Checkout
+    stripe_btn = ""
+    if stripe.api_key and STRIPE_PRICE:
+        stripe_btn = '<a href="/stripe-checkout" class="btn btn-warning" style="width: 100%; margin-top: 15px;">💳 Mit Kreditkarte zahlen (1.99€)</a>'
+    
     content = f"""
-    <h1>🔐 Premium aktivieren</h1>
+    <h1>🔐 Premium</h1>
     {msg}
     <div class="card">
+        <h3>🔑 Mit Code aktivieren</h3>
         <form method="POST">
             <input type="text" name="code" placeholder="Premium-Code" required>
             <button type="submit" class="btn btn-success" style="width: 100%;">🚀 Aktivieren</button>
         </form>
-        <div class="alert alert-info" style="margin-top: 20px;">
-            💡 Admin-Code: <strong>XSIKOM-ADMIN-2026-PREMIUM</strong>
-        </div>
     </div>
+    <div class="card">
+        <h3>💳 Mit Zahlung</h3>
+        {stripe_btn if stripe_btn else '<p style="color: var(--text-muted);">Stripe wird konfiguriert...</p>'}
+    </div>
+    """
+    return render_template_string(BASE_HTML, content=content, user=session)
+
+
+@app.route("/stripe-checkout")
+def stripe_checkout():
+    if "user_id" not in session:
+        return redirect("/login")
+    
+    if not stripe.api_key or not STRIPE_PRICE:
+        return redirect("/aktivieren")
+    
+    try:
+        domain = request.host_url.rstrip("/")
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            line_items=[{"price": STRIPE_PRICE, "quantity": 1}],
+            mode="subscription",
+            success_url=f"{domain}/stripe-success?session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{domain}/premium",
+            metadata={"user_id": str(session["user_id"])}
+        )
+        return redirect(checkout_session.url, code=303)
+    except Exception as e:
+        content = f"""
+        <h1>❌ Fehler</h1>
+        <div class="alert alert-err">{str(e)[:200]}</div>
+        <a href="/premium" class="btn btn-primary">Zurueck</a>
+        """
+        return render_template_string(BASE_HTML, content=content, user=session)
+
+
+@app.route("/stripe-success")
+def stripe_success():
+    if "user_id" not in session:
+        return redirect("/login")
+    
+    sid = request.args.get("session_id")
+    if sid and stripe.api_key:
+        try:
+            cs = stripe.checkout.Session.retrieve(sid)
+            if cs.payment_status == "paid":
+                premium_aktivieren(session["user_id"])
+                session["premium"] = 1
+        except Exception:
+            pass
+    
+    content = """
+    <h1>🎉 Zahlung erfolgreich!</h1>
+    <div class="alert alert-ok">
+        ✅ <strong>Premium aktiviert!</strong>
+        <p>Unbegrenzte Bewerbungen freigeschaltet!</p>
+    </div>
+    <a href="/dashboard" class="btn btn-primary">Dashboard</a>
     """
     return render_template_string(BASE_HTML, content=content, user=session)
 
