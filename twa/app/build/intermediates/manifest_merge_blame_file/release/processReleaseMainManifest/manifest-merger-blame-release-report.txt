@@ -22,7 +22,7 @@
 22     the abbreviated format.
 23-->
 24<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-25    package="com.onrender.xsikom_bewerbungsbot.twa"
+25    package="de.xsikom.bewerbungsbot"
 26    android:versionCode="1"
 27    android:versionName="1" >
 28
@@ -76,12 +76,12 @@
 54
 55    <permission
 55-->[androidx.core:core:1.13.0] C:\Users\casim\.gradle\caches\8.11.1\transforms\a5429f7b20c607b890f08b5283ad4ec0\transformed\core-1.13.0\AndroidManifest.xml:22:5-24:47
-56        android:name="com.onrender.xsikom_bewerbungsbot.twa.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+56        android:name="de.xsikom.bewerbungsbot.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
 56-->[androidx.core:core:1.13.0] C:\Users\casim\.gradle\caches\8.11.1\transforms\a5429f7b20c607b890f08b5283ad4ec0\transformed\core-1.13.0\AndroidManifest.xml:23:9-81
 57        android:protectionLevel="signature" />
 57-->[androidx.core:core:1.13.0] C:\Users\casim\.gradle\caches\8.11.1\transforms\a5429f7b20c607b890f08b5283ad4ec0\transformed\core-1.13.0\AndroidManifest.xml:24:9-44
 58
-59    <uses-permission android:name="com.onrender.xsikom_bewerbungsbot.twa.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" /> <!-- Although the *SdkVersion is captured in gradle build files, this is required for non gradle builds -->
+59    <uses-permission android:name="de.xsikom.bewerbungsbot.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" /> <!-- Although the *SdkVersion is captured in gradle build files, this is required for non gradle builds -->
 59-->[androidx.core:core:1.13.0] C:\Users\casim\.gradle\caches\8.11.1\transforms\a5429f7b20c607b890f08b5283ad4ec0\transformed\core-1.13.0\AndroidManifest.xml:26:5-97
 59-->[androidx.core:core:1.13.0] C:\Users\casim\.gradle\caches\8.11.1\transforms\a5429f7b20c607b890f08b5283ad4ec0\transformed\core-1.13.0\AndroidManifest.xml:26:22-94
 60    <!-- <uses-sdk android:minSdkVersion="14"/> -->
@@ -94,7 +94,7 @@
 63
 64    <application
 64-->D:\IT-Praktikum-Bot\twa\app\src\main\AndroidManifest.xml:35:5-231:19
-65        android:name="com.onrender.xsikom_bewerbungsbot.twa.Application"
+65        android:name="de.xsikom.bewerbungsbot.Application"
 65-->D:\IT-Praktikum-Bot\twa\app\src\main\AndroidManifest.xml:36:9-35
 66        android:allowBackup="true"
 66-->D:\IT-Praktikum-Bot\twa\app\src\main\AndroidManifest.xml:37:9-35
@@ -160,7 +160,7 @@
 98        </activity>
 99        <activity
 99-->D:\IT-Praktikum-Bot\twa\app\src\main\AndroidManifest.xml:79:9-164:20
-100            android:name="com.onrender.xsikom_bewerbungsbot.twa.LauncherActivity"
+100            android:name="de.xsikom.bewerbungsbot.LauncherActivity"
 100-->D:\IT-Praktikum-Bot\twa\app\src\main\AndroidManifest.xml:79:19-50
 101            android:alwaysRetainTaskState="true"
 101-->D:\IT-Praktikum-Bot\twa\app\src\main\AndroidManifest.xml:80:13-49
@@ -321,7 +321,7 @@
 180
 181        <service
 181-->D:\IT-Praktikum-Bot\twa\app\src\main\AndroidManifest.xml:181:9-196:19
-182            android:name="com.onrender.xsikom_bewerbungsbot.twa.DelegationService"
+182            android:name="de.xsikom.bewerbungsbot.DelegationService"
 182-->D:\IT-Praktikum-Bot\twa\app\src\main\AndroidManifest.xml:182:13-46
 183            android:enabled="@bool/enableNotification"
 183-->D:\IT-Praktikum-Bot\twa\app\src\main\AndroidManifest.xml:183:13-55
@@ -439,7 +439,7 @@
 244-->[androidx.emoji2:emoji2:1.3.0] C:\Users\casim\.gradle\caches\8.11.1\transforms\5cb7738f5242d8c4e38c8ffa2b265b31\transformed\emoji2-1.3.0\AndroidManifest.xml:24:9-32:20
 245            android:name="androidx.startup.InitializationProvider"
 245-->[androidx.emoji2:emoji2:1.3.0] C:\Users\casim\.gradle\caches\8.11.1\transforms\5cb7738f5242d8c4e38c8ffa2b265b31\transformed\emoji2-1.3.0\AndroidManifest.xml:25:13-67
-246            android:authorities="com.onrender.xsikom_bewerbungsbot.twa.androidx-startup"
+246            android:authorities="de.xsikom.bewerbungsbot.androidx-startup"
 246-->[androidx.emoji2:emoji2:1.3.0] C:\Users\casim\.gradle\caches\8.11.1\transforms\5cb7738f5242d8c4e38c8ffa2b265b31\transformed\emoji2-1.3.0\AndroidManifest.xml:26:13-68
 247            android:exported="false" >
 247-->[androidx.emoji2:emoji2:1.3.0] C:\Users\casim\.gradle\caches\8.11.1\transforms\5cb7738f5242d8c4e38c8ffa2b265b31\transformed\emoji2-1.3.0\AndroidManifest.xml:27:13-37

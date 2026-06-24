@@ -40,7 +40,7 @@
     <string name="launchUrl" translatable="false">https://xsikom-bewerbungsbot.onrender.com/</string>
     <string name="launcherName" translatable="false">XsiKOM Bot</string>
     <string name="orientation" translatable="false">portrait</string>
-    <string name="providerAuthority" translatable="false">com.onrender.xsikom_bewerbungsbot.twa.fileprovider</string>
+    <string name="providerAuthority" translatable="false">de.xsikom.bewerbungsbot.fileprovider</string>
     <string name="shortcut_name_0" translatable="false">Dashboard</string>
     <string name="shortcut_name_1" translatable="false">Aaliyah KI</string>
     <string name="shortcut_name_2" translatable="false">Lebenslauf</string>

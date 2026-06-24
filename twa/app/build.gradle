@@ -21,7 +21,7 @@ plugins {
 }
 
 def twaManifest = [
-    applicationId: 'com.onrender.xsikom_bewerbungsbot.twa',
+    applicationId: 'de.xsikom.bewerbungsbot',
     hostName: 'xsikom-bewerbungsbot.onrender.com', // The domain being opened in the TWA.
     launchUrl: '/', // The start path for the TWA. Must be relative to the domain.
     name: 'XsiKOM-BewerbungsBOT', // The application name.
@@ -52,9 +52,9 @@ def twaManifest = [
 
 android {
     compileSdkVersion 36
-    namespace "com.onrender.xsikom_bewerbungsbot.twa"
+    namespace "de.xsikom.bewerbungsbot"
     defaultConfig {
-        applicationId "com.onrender.xsikom_bewerbungsbot.twa"
+        applicationId "de.xsikom.bewerbungsbot"
         minSdkVersion 21
         targetSdkVersion 35
         versionCode 1

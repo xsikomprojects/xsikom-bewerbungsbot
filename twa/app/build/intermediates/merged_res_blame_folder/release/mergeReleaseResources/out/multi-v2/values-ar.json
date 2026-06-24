@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.onrender.xsikom_bewerbungsbot.twa.app-mergeReleaseResources-27:/values-ar/values-ar.xml",
+            "outputFile": "de.xsikom.bewerbungsbot.app-mergeReleaseResources-27:/values-ar/values-ar.xml",
             "map": [
                 {
                     "source": "C:\\Users\\casim\\.gradle\\caches\\8.11.1\\transforms\\183ebbc8ed821348f80a6d36d20b75e3\\transformed\\appcompat-1.7.0\\res\\values-ar\\values-ar.xml",

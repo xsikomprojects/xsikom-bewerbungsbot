@@ -4,7 +4,7 @@
     "type": "PACKAGED_MANIFESTS",
     "kind": "Directory"
   },
-  "applicationId": "com.onrender.xsikom_bewerbungsbot.twa",
+  "applicationId": "de.xsikom.bewerbungsbot",
   "variantName": "release",
   "elements": [
     {

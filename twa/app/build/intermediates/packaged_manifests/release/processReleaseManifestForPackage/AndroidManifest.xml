@@ -22,7 +22,7 @@
      the abbreviated format.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.onrender.xsikom_bewerbungsbot.twa"
+    package="de.xsikom.bewerbungsbot"
     android:versionCode="1"
     android:versionName="1" >
 
@@ -53,16 +53,16 @@
     <uses-permission android:name="com.android.vending.BILLING" />
 
     <permission
-        android:name="com.onrender.xsikom_bewerbungsbot.twa.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+        android:name="de.xsikom.bewerbungsbot.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
         android:protectionLevel="signature" />
 
-    <uses-permission android:name="com.onrender.xsikom_bewerbungsbot.twa.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" /> <!-- Although the *SdkVersion is captured in gradle build files, this is required for non gradle builds -->
+    <uses-permission android:name="de.xsikom.bewerbungsbot.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" /> <!-- Although the *SdkVersion is captured in gradle build files, this is required for non gradle builds -->
     <!-- <uses-sdk android:minSdkVersion="14"/> -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
-        android:name="com.onrender.xsikom_bewerbungsbot.twa.Application"
+        android:name="de.xsikom.bewerbungsbot.Application"
         android:allowBackup="true"
         android:appComponentFactory="androidx.core.app.CoreComponentFactory"
         android:extractNativeLibs="true"
@@ -97,7 +97,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="com.onrender.xsikom_bewerbungsbot.twa.LauncherActivity"
+            android:name="de.xsikom.bewerbungsbot.LauncherActivity"
             android:alwaysRetainTaskState="true"
             android:exported="true"
             android:label="@string/launcherName" >
@@ -179,7 +179,7 @@
         </provider>
 
         <service
-            android:name="com.onrender.xsikom_bewerbungsbot.twa.DelegationService"
+            android:name="de.xsikom.bewerbungsbot.DelegationService"
             android:enabled="@bool/enableNotification"
             android:exported="@bool/enableNotification" >
             <meta-data
@@ -243,7 +243,7 @@
 
         <provider
             android:name="androidx.startup.InitializationProvider"
-            android:authorities="com.onrender.xsikom_bewerbungsbot.twa.androidx-startup"
+            android:authorities="de.xsikom.bewerbungsbot.androidx-startup"
             android:exported="false" >
             <meta-data
                 android:name="androidx.emoji2.text.EmojiCompatInitializer"

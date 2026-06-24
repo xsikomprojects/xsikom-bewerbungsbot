@@ -47,7 +47,7 @@ MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\ca
 MERGED from [androidx.arch.core:core-runtime:2.2.0] C:\Users\casim\.gradle\caches\8.11.1\transforms\09558f1b9b56a339611f1f3ff5685123\transformed\core-runtime-2.2.0\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.annotation:annotation-experimental:1.4.1] C:\Users\casim\.gradle\caches\8.11.1\transforms\7880efad619dc72d569f5e6e2c17444b\transformed\annotation-experimental-1.4.1\AndroidManifest.xml:2:1-7:12
 	package
-		ADDED from D:\IT-Praktikum-Bot\twa\app\src\main\AndroidManifest.xml:23:5-52
+		ADDED from D:\IT-Praktikum-Bot\twa\app\src\main\AndroidManifest.xml:23:5-38
 		INJECTED from D:\IT-Praktikum-Bot\twa\app\src\main\AndroidManifest.xml
 	android:versionName
 		INJECTED from D:\IT-Praktikum-Bot\twa\app\src\main\AndroidManifest.xml
@@ -152,7 +152,7 @@ category#android.intent.category.DEFAULT
 ADDED from D:\IT-Praktikum-Bot\twa\app\src\main\AndroidManifest.xml:74:21-80
 	android:name
 		ADDED from D:\IT-Praktikum-Bot\twa\app\src\main\AndroidManifest.xml:74:31-77
-activity#com.onrender.xsikom_bewerbungsbot.twa.LauncherActivity
+activity#de.xsikom.bewerbungsbot.LauncherActivity
 ADDED from D:\IT-Praktikum-Bot\twa\app\src\main\AndroidManifest.xml:79:9-164:20
 	android:label
 		ADDED from D:\IT-Praktikum-Bot\twa\app\src\main\AndroidManifest.xml:81:13-49
@@ -306,7 +306,7 @@ ADDED from D:\IT-Praktikum-Bot\twa\app\src\main\AndroidManifest.xml:176:13-178:5
 		ADDED from D:\IT-Praktikum-Bot\twa\app\src\main\AndroidManifest.xml:178:17-50
 	android:name
 		ADDED from D:\IT-Praktikum-Bot\twa\app\src\main\AndroidManifest.xml:177:17-67
-service#com.onrender.xsikom_bewerbungsbot.twa.DelegationService
+service#de.xsikom.bewerbungsbot.DelegationService
 ADDED from D:\IT-Praktikum-Bot\twa\app\src\main\AndroidManifest.xml:181:9-196:19
 	android:enabled
 		ADDED from D:\IT-Praktikum-Bot\twa\app\src\main\AndroidManifest.xml:183:13-55
@@ -560,7 +560,7 @@ ADDED from [androidx.core:core:1.13.0] C:\Users\casim\.gradle\caches\8.11.1\tran
 		ADDED from [androidx.core:core:1.13.0] C:\Users\casim\.gradle\caches\8.11.1\transforms\a5429f7b20c607b890f08b5283ad4ec0\transformed\core-1.13.0\AndroidManifest.xml:24:9-44
 	android:name
 		ADDED from [androidx.core:core:1.13.0] C:\Users\casim\.gradle\caches\8.11.1\transforms\a5429f7b20c607b890f08b5283ad4ec0\transformed\core-1.13.0\AndroidManifest.xml:23:9-81
-permission#com.onrender.xsikom_bewerbungsbot.twa.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+permission#de.xsikom.bewerbungsbot.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
 ADDED from [androidx.core:core:1.13.0] C:\Users\casim\.gradle\caches\8.11.1\transforms\a5429f7b20c607b890f08b5283ad4ec0\transformed\core-1.13.0\AndroidManifest.xml:22:5-24:47
 	android:protectionLevel
 		ADDED from [androidx.core:core:1.13.0] C:\Users\casim\.gradle\caches\8.11.1\transforms\a5429f7b20c607b890f08b5283ad4ec0\transformed\core-1.13.0\AndroidManifest.xml:24:9-44
@@ -570,7 +570,7 @@ uses-permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
 ADDED from [androidx.core:core:1.13.0] C:\Users\casim\.gradle\caches\8.11.1\transforms\a5429f7b20c607b890f08b5283ad4ec0\transformed\core-1.13.0\AndroidManifest.xml:26:5-97
 	android:name
 		ADDED from [androidx.core:core:1.13.0] C:\Users\casim\.gradle\caches\8.11.1\transforms\a5429f7b20c607b890f08b5283ad4ec0\transformed\core-1.13.0\AndroidManifest.xml:26:22-94
-uses-permission#com.onrender.xsikom_bewerbungsbot.twa.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+uses-permission#de.xsikom.bewerbungsbot.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
 ADDED from [androidx.core:core:1.13.0] C:\Users\casim\.gradle\caches\8.11.1\transforms\a5429f7b20c607b890f08b5283ad4ec0\transformed\core-1.13.0\AndroidManifest.xml:26:5-97
 	android:name
 		ADDED from [androidx.core:core:1.13.0] C:\Users\casim\.gradle\caches\8.11.1\transforms\a5429f7b20c607b890f08b5283ad4ec0\transformed\core-1.13.0\AndroidManifest.xml:26:22-94

@@ -1,5 +1,5 @@
 {
-  "packageId": "com.onrender.xsikom_bewerbungsbot.twa",
+  "packageId": "de.xsikom.bewerbungsbot",
   "host": "xsikom-bewerbungsbot.onrender.com",
   "name": "XsiKOM-BewerbungsBOT",
   "launcherName": "XsiKOM Bot",

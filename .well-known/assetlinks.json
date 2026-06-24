@@ -1,8 +1,16 @@
-[{
-  "relation": ["delegate_permission/common.handle_all_urls"],
-  "target": {
-    "namespace": "android_app",
-    "package_name": "de.xsikom.bewerbungsbot",
-    "sha256_cert_fingerprints": ["AD:37:ED:BD:3A:86:30:98:B0:4B:19:D9:6E:CD:30:C7:CB:F7:22:89:3C:04:E2:9A:5B:2D:C7:99:A4:60:61:0A"]
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "de.xsikom.bewerbungsbot",
+      "sha256_cert_fingerprints": [
+        "AD:37:ED:BD:3A:86:30:98:B0:4B:19:D9:6E:CD:30:C7:CB:F7:22:89:3C:04:E2:9A:5B:2D:C7:99:A4:60:61:0A",
+        "C4:E3:A3:17:26:BA:D3:A8:48:1D:80:70:39:2D:C7:5C:9E:72:89:EB:C8:5D:94:50:65:79:BC:A7:AC:C9:C4:F5"
+      ]
+    }
   }
-}]
+]

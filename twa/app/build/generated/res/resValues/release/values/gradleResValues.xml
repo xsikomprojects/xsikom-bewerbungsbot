@@ -40,7 +40,7 @@
     <!-- Value from default config. -->
     <string name="orientation" translatable="false">portrait</string>
     <!-- Value from default config. -->
-    <string name="providerAuthority" translatable="false">com.onrender.xsikom_bewerbungsbot.twa.fileprovider</string>
+    <string name="providerAuthority" translatable="false">de.xsikom.bewerbungsbot.fileprovider</string>
     <!-- Value from default config. -->
     <string name="shortcut_name_0" translatable="false">Dashboard</string>
     <!-- Value from default config. -->
