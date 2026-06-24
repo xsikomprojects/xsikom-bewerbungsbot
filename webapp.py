@@ -234,8 +234,9 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:
 .st{color:var(--t2);font-size:13px}
 .nv{background:rgba(19,24,41,0.5);padding:12px 0;border-bottom:1px solid var(--bd);overflow-x:auto;white-space:nowrap}
 .ni{max-width:1200px;margin:0 auto;padding:0 20px;display:flex;gap:5px}
-.nv a{color:var(--t2);text-decoration:none;padding:10px 18px;border-radius:12px;font-size:14px;transition:all 0.3s}
-.nv a:hover{color:var(--t1);background:rgba(0,217,255,0.1)}
+.nv a{color:var(--t2);text-decoration:none;padding:10px 18px;border-radius:12px;font-size:13px;transition:all 0.3s;text-shadow:0 1px 2px rgba(0,0,0,0.3);letter-spacing:0.3px;font-weight:500;position:relative}
+.nv a:hover{color:var(--t1);background:rgba(0,217,255,0.15);transform:translateY(-2px);box-shadow:0 4px 15px rgba(0,217,255,0.2);text-shadow:0 0 10px rgba(0,217,255,0.5)}
+.nv a:active{transform:translateY(1px);box-shadow:0 1px 5px rgba(0,0,0,0.3)}
 .cd{background:var(--cd);backdrop-filter:blur(20px);border-radius:20px;padding:30px;margin:20px 0;border:1px solid var(--bd);transition:all 0.4s}
 .cd:hover{transform:translateY(-5px);border-color:rgba(0,217,255,0.3)}
 .bt{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 28px;border:none;border-radius:12px;cursor:pointer;font-weight:600;font-size:14px;text-decoration:none;transition:all 0.3s;font-family:'Poppins',sans-serif}
@@ -282,16 +283,18 @@ a{color:var(--cy);text-decoration:none}
 <div class="st">{{ user.vorname if user else 'KI Bewerbungs-Assistent' }}</div></div></div></div>
 {% if user %}
 <div class="nv"><div class="ni">
-<a href="/dashboard">🏠</a>
+<a href="/dashboard">🏠 Dashboard</a>
 <a href="/aaliyah">🤖 Aaliyah</a>
 <a href="/avinu">⚡ AVINU</a>
-<a href="/xsi">🤖 XSI</a>
-<a href="/lebenslauf">📝</a>
-<a href="/uploads">📂</a>
-<a href="/bewerbungen">📧</a>
-<a href="/premium">💎</a>
-<a href="/profil">⚙️</a>
-<a href="/logout">🚪</a>
+<a href="/xsi">🤖 XSI Bot</a>
+<a href="/lebenslauf">📝 Lebenslauf</a>
+<a href="/uploads">📂 Dateien</a>
+<a href="/bewerbungen">📧 Bewerbungen</a>
+<a href="/premium">💎 Premium</a>
+<a href="/tutorial">📚 Tutorial</a>
+<a href="/updates">🔄 Updates</a>
+<a href="/profil">⚙️ Profil</a>
+<a href="/logout">🚪 Logout</a>
 </div></div>
 {% endif %}
 <div class="ct">{{ content|safe }}</div>
@@ -619,6 +622,61 @@ def stripe_success():
 
 
 @app.route("/profil")
+@app.route("/tutorial")
+def tutorial():
+    if "user_id" not in session: return redirect("/login")
+    c = '<h1>📚 Tutorial</h1><p>Lerne alle Features!</p><div class="gr"><a href="/tutorial/start" style="text-decoration:none"><div class="sc"><div class="si">🚀</div><div class="sv">Start</div><div class="sl">Erste Schritte</div></div></a><a href="/tutorial/aaliyah" style="text-decoration:none"><div class="sc"><div class="si">🤖</div><div class="sv">Aaliyah</div><div class="sl">KI-Beraterin</div></div></a><a href="/tutorial/avinu" style="text-decoration:none"><div class="sc"><div class="si">⚡</div><div class="sv">AVINU</div><div class="sl">Job-Suche</div></div></a><a href="/tutorial/xsi" style="text-decoration:none"><div class="sc"><div class="si">🤖</div><div class="sv">XSI</div><div class="sl">Auto-Bewerber</div></div></a><a href="/tutorial/faq" style="text-decoration:none"><div class="sc"><div class="si">❓</div><div class="sv">FAQ</div><div class="sl">Fragen</div></div></a><a href="/tutorial/tipps" style="text-decoration:none"><div class="sc"><div class="si">💡</div><div class="sv">Tipps</div><div class="sl">Profi-Tipps</div></div></a></div>'
+    return render_template_string(H, content=c, user=session)
+
+
+@app.route("/tutorial/start")
+def tutorial_start():
+    if "user_id" not in session: return redirect("/login")
+    c = '<h1>🚀 Erste Schritte</h1><div class="cd"><h3>Schritt 1: Profil</h3><p>Gehe zu <a href="/lebenslauf">📝 Lebenslauf</a> und fuelle deine Daten aus.</p></div><div class="cd"><h3>Schritt 2: Unterlagen</h3><p>Gehe zu <a href="/uploads">📂 Dateien</a> und lade hoch: Lebenslauf (PDF), Zeugnisse, Zertifikate, Bewerbungsfoto.</p></div><div class="cd"><h3>Schritt 3: Jobs suchen</h3><p>Gehe zu <a href="/avinu">⚡ AVINU</a>, waehle Branche + Standort und klick "Jobs suchen".</p></div><div class="cd"><h3>Schritt 4: Bewerben</h3><p>Gehe zu <a href="/xsi/neu">🤖 XSI</a>, gib Firma + Position ein, waehle Vorlage und klick "Senden!"</p></div><a href="/tutorial" class="bt b1">← Tutorial</a>'
+    return render_template_string(H, content=c, user=session)
+
+
+@app.route("/tutorial/aaliyah")
+def tutorial_aaliyah():
+    if "user_id" not in session: return redirect("/login")
+    c = '<h1>🤖 Aaliyah Tutorial</h1><div class="cd"><h3>Was kann Aaliyah?</h3><ul style="padding-left:25px;line-height:2"><li>Bewerbungstipps</li><li>Anschreiben verbessern</li><li>Lebenslauf-Tipps</li><li>Interview-Vorbereitung</li><li>Gehaltsverhandlung</li><li>IT-Fachwissen</li></ul></div><div class="cd"><h3>Beispiel-Fragen</h3><p>"Wie schreibe ich ein Anschreiben fuer IT-Praktikum?"</p><p>"Welche Fragen kommen im Vorstellungsgespraech?"</p><p>"Wie verhandle ich Gehalt?"</p><p>"Erklaere mir TCP/IP"</p></div><a href="/aaliyah" class="bt b5">🤖 Aaliyah fragen</a> <a href="/tutorial" class="bt b1">← Tutorial</a>'
+    return render_template_string(H, content=c, user=session)
+
+
+@app.route("/tutorial/avinu")
+def tutorial_avinu():
+    if "user_id" not in session: return redirect("/login")
+    c = '<h1>⚡ AVINU Tutorial</h1><div class="cd"><h3>So gehts</h3><ol style="padding-left:25px;line-height:2"><li>Branche waehlen (14 verfuegbar)</li><li>Beruf eingeben (300+ Berufe)</li><li>Standort eingeben</li><li>Umkreis waehlen (5-200 km)</li><li>Optional: International anklicken</li><li>"Jobs suchen" klicken!</li></ol></div><div class="cd"><h3>Nach der Suche</h3><ul style="padding-left:25px;line-height:2"><li>⭐ Favorit markieren</li><li>🤖 XSI: Auto-Bewerbung</li><li>🔗 Original-Stellenanzeige</li><li>Filter: Alle/Offen/Beworben/Favoriten</li></ul></div><a href="/avinu" class="bt b1">⚡ AVINU starten</a> <a href="/tutorial" class="bt b1">← Tutorial</a>'
+    return render_template_string(H, content=c, user=session)
+
+
+@app.route("/tutorial/xsi")
+def tutorial_xsi():
+    if "user_id" not in session: return redirect("/login")
+    c = '<h1>🤖 XSI Tutorial</h1><div class="cd"><h3>Vorbereitung</h3><p>Bevor du XSI nutzt:</p><ul style="padding-left:25px;line-height:2"><li>📄 Lebenslauf hochladen</li><li>📜 Zeugnisse hochladen</li><li>🏆 Zertifikate hochladen</li><li>🖼️ Bewerbungsfoto hochladen</li><li>📝 Profil ausfuellen</li></ul></div><div class="cd"><h3>Bewerbung erstellen</h3><ol style="padding-left:25px;line-height:2"><li>Art waehlen (Job/Praktikum/Ausbildung)</li><li>Firma eingeben</li><li>Position eingeben</li><li>E-Mail der Firma eingeben</li><li>Sprache waehlen (DE/EN/FR)</li><li>Vorlage waehlen</li><li>"Senden!" klicken</li></ol></div><div class="al ao">✅ XSI erstellt KI-Anschreiben + haengt ALLE Unterlagen an!</div><a href="/xsi/neu" class="bt b2">🤖 XSI starten</a> <a href="/tutorial" class="bt b1">← Tutorial</a>'
+    return render_template_string(H, content=c, user=session)
+
+
+@app.route("/tutorial/faq")
+def tutorial_faq():
+    if "user_id" not in session: return redirect("/login")
+    c = '<h1>❓ FAQ</h1>'
+    faqs = [("Ist XsiKOM kostenlos?","Ja! Free: 5 Bewerbungen/Monat. Premium: 1.99€ unbegrenzt."),("Wie funktioniert die KI?","Llama 3.3 70B via Groq API. Generiert individuelle Anschreiben."),("Sind meine Daten sicher?","Ja! AES-256, 2FA, DSGVO konform."),("Kann ich Daten loeschen?","Ja! Profil → Loeschen. 30 Tage Frist."),("Welche Jobportale?","Arbeitsagentur, Indeed, StepStone, RemoteOK, Jobicy und mehr."),("Welche Sprachen?","Deutsch, Englisch, Franzoesisch."),("Welche Dateiformate?","PDF, PNG, JPG, JPEG, GIF, BMP, WEBP."),("Wie aktiviere ich Premium?","Admin-Code: XSIKOM-ADMIN-2026-PREMIUM oder Stripe.")]
+    for f,a in faqs:
+        c += f'<div class="cd"><h3>❓ {f}</h3><p>{a}</p></div>'
+    c += '<a href="/tutorial" class="bt b1">← Tutorial</a>'
+    return render_template_string(H, content=c, user=session)
+
+
+@app.route("/tutorial/tipps")
+def tutorial_tipps():
+    if "user_id" not in session: return redirect("/login")
+    tipps = [("🎯 Profil komplett ausfuellen","Je vollstaendiger, desto bessere KI-Anschreiben!"),("📄 Professionelle PDFs","Gut formatierter Lebenslauf als PDF macht den besten Eindruck."),("🖼️ Gutes Bewerbungsfoto","Professionelles Foto erhoeht die Chancen."),("🔍 Suchbegriffe variieren","Verschiedene Begriffe finden verschiedene Jobs."),("⭐ Favoriten nutzen","Interessante Jobs markieren."),("🌍 International suchen","Remote-Jobs weltweit mit 'International' Checkbox."),("📝 Erst Entwurf dann Senden","Pruefe das KI-Anschreiben vor dem Versand."),("🤖 Aaliyah fuer Vorbereitung","Frag Aaliyah vor dem Interview nach der Firma!")]
+    c = '<h1>💡 Profi-Tipps</h1>'
+    for t,b in tipps:
+        c += f'<div class="cd"><h3>{t}</h3><p>{b}</p></div>'
+    c += '<a href="/tutorial" class="bt b1">← Tutorial</a>'
+    return render_template_string(H, content=c, user=session)
 def profil():
     if "user_id" not in session: return redirect("/login")
     tf,_=get_2fa_status(session["user_id"])
