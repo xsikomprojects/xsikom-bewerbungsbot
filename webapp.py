@@ -623,6 +623,72 @@ def stripe_success():
 
 @app.route("/profil")
 @app.route("/tutorial")
+@app.route("/updates")
+def updates_seite():
+    if "user_id" not in session: return redirect("/login")
+    try:
+        from auto_update import update_status, changelog_laden, vorschlaege_laden, ist_update_faellig, monatliches_update
+        st = update_status()
+        cl = changelog_laden(5)
+        vs = vorschlaege_laden(5)
+        faellig = ist_update_faellig()
+    except Exception as e:
+        st = {"version": "8.0", "letztes_update": "---", "naechstes_update": "---", "offene_vorschlaege": 0, "offenes_feedback": 0, "updates_gesamt": 0}
+        cl = []
+        vs = []
+        faellig = True
+
+    cl_html = ""
+    for c2 in cl:
+        cl_html += f'<div class="ui"><div><strong>v{c2[1]}</strong> - {c2[2][:16]}<br><small style="color:var(--t3)">{str(c2[3])[:200]}...</small></div></div>'
+    if not cl_html:
+        cl_html = '<p style="color:var(--t3)">Noch keine Updates</p>'
+
+    vs_html = ""
+    for v in vs:
+        icon = "✅" if v[4] else "⏳"
+        vs_html += f'<div class="ui"><div>{icon} <strong>{v[1]}</strong><br><small style="color:var(--t3)">{str(v[2])[:150]}...</small></div></div>'
+    if not vs_html:
+        vs_html = '<p style="color:var(--t3)">Keine Vorschlaege</p>'
+
+    update_btn = ""
+    if session.get("rolle") == "admin":
+        update_btn = '<a href="/updates/jetzt" class="bt b2" style="width:100%;margin-top:15px">🤖 KI-Update jetzt starten!</a>'
+
+    c = f'<h1>🔄 Updates & KI-Support</h1><div class="gr"><div class="sc"><div class="si">📦</div><div class="sv">v{st["version"]}</div><div class="sl">Version</div></div><div class="sc"><div class="si">📅</div><div class="sv">{str(st["letztes_update"])[:10]}</div><div class="sl">Letztes Update</div></div><div class="sc"><div class="si">⏰</div><div class="sv">{st["naechstes_update"]}</div><div class="sl">Naechstes</div></div><div class="sc"><div class="si">💡</div><div class="sv">{st["offene_vorschlaege"]}</div><div class="sl">KI-Vorschlaege</div></div></div>{"<div class=al ai>🤖 KI-Update faellig!</div>" if faellig else "<div class=al ao>✅ App aktuell!</div>"}{update_btn}<h2 style="margin-top:30px">📋 Changelog</h2><div class="cd">{cl_html}</div><h2>💡 KI-Vorschlaege</h2><div class="cd">{vs_html}</div><h2>📝 Feedback</h2><div class="cd"><form method="POST" action="/updates/feedback"><select name="typ" required><option value="bug">🐛 Bug</option><option value="feature">✨ Feature</option><option value="lob">👍 Lob</option><option value="kritik">👎 Kritik</option></select><textarea name="nachricht" rows="4" placeholder="Dein Feedback..." required></textarea><select name="bewertung"><option value="5">⭐⭐⭐⭐⭐</option><option value="4">⭐⭐⭐⭐</option><option value="3">⭐⭐⭐</option><option value="2">⭐⭐</option><option value="1">⭐</option></select><button type="submit" class="bt b2" style="width:100%">📤 Senden</button></form></div>'
+    return render_template_string(H, content=c, user=session)
+
+
+@app.route("/updates/jetzt")
+def update_jetzt():
+    if "user_id" not in session: return redirect("/login")
+    if session.get("rolle") != "admin": return redirect("/updates")
+    try:
+        from auto_update import monatliches_update
+        ergebnisse = monatliches_update()
+        details = ""
+        for titel, inhalt in ergebnisse:
+            details += f'<div class="cd"><h3>{titel}</h3><p>{str(inhalt)[:500].replace(chr(10),"<br>")}</p></div>'
+        c = f'<h1>🤖 KI-Update fertig!</h1><div class="al ao">✅ {len(ergebnisse)} Bereiche analysiert!</div>{details}<a href="/updates" class="bt b1">← Zurueck</a>'
+    except Exception as e:
+        c = f'<h1>❌ Update Fehler</h1><div class="al ae">{str(e)[:200]}</div><a href="/updates" class="bt b1">← Zurueck</a>'
+    return render_template_string(H, content=c, user=session)
+
+
+@app.route("/updates/feedback", methods=["POST"])
+def update_feedback():
+    if "user_id" not in session: return redirect("/login")
+    try:
+        from auto_update import feedback_speichern
+        typ = request.form.get("typ", "")
+        nachricht = request.form.get("nachricht", "")
+        bewertung = int(request.form.get("bewertung", 5))
+        if typ and nachricht:
+            feedback_speichern(session["user_id"], typ, nachricht, bewertung)
+    except Exception:
+        pass
+    return redirect("/updates")
+
 def tutorial():
     if "user_id" not in session: return redirect("/login")
     c = '<h1>📚 Tutorial</h1><p>Lerne alle Features!</p><div class="gr"><a href="/tutorial/start" style="text-decoration:none"><div class="sc"><div class="si">🚀</div><div class="sv">Start</div><div class="sl">Erste Schritte</div></div></a><a href="/tutorial/aaliyah" style="text-decoration:none"><div class="sc"><div class="si">🤖</div><div class="sv">Aaliyah</div><div class="sl">KI-Beraterin</div></div></a><a href="/tutorial/avinu" style="text-decoration:none"><div class="sc"><div class="si">⚡</div><div class="sv">AVINU</div><div class="sl">Job-Suche</div></div></a><a href="/tutorial/xsi" style="text-decoration:none"><div class="sc"><div class="si">🤖</div><div class="sv">XSI</div><div class="sl">Auto-Bewerber</div></div></a><a href="/tutorial/faq" style="text-decoration:none"><div class="sc"><div class="si">❓</div><div class="sv">FAQ</div><div class="sl">Fragen</div></div></a><a href="/tutorial/tipps" style="text-decoration:none"><div class="sc"><div class="si">💡</div><div class="sv">Tipps</div><div class="sl">Profi-Tipps</div></div></a></div>'
