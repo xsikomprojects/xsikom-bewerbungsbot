@@ -1,12 +1,8 @@
-import os
-import bleach
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from flask_wtf.csrf import CSRFProtect
 """
 Security Middleware: Rate-Limiting, CSRF, Secure Cookies, XSS-Schutz
 Sprint 1 – XsiKOM v10.0
 """
+import os
 import bleach
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -23,12 +19,6 @@ limiter = Limiter(
     storage_uri="memory://",
 )
 
-# Strenge Limits für sensible Routen
-LOGIN_LIMIT    = "5 per minute"
-REGISTER_LIMIT = "3 per minute"
-RESET_LIMIT    = "3 per hour"
-KI_LIMIT       = "20 per minute"
-
 
 # ─────────────────────────────────────────────────────────────────
 # B2 – CSRF SCHUTZ
@@ -41,7 +31,6 @@ csrf = CSRFProtect()
 # B4 – XSS SCHUTZ
 # ─────────────────────────────────────────────────────────────────
 
-# Erlaubte HTML-Tags für KI-Antworten
 ERLAUBTE_TAGS = [
     "b", "strong", "i", "em", "u",
     "p", "br", "ul", "ol", "li",
@@ -49,21 +38,14 @@ ERLAUBTE_TAGS = [
     "code", "pre", "blockquote",
 ]
 
-ERLAUBTE_ATTRIBUTE = {
-    "*": ["style"],
-}
+ERLAUBTE_ATTRIBUTE = {"*": ["style"]}
 
 
 def xss_clean(text: str) -> str:
-    """
-    Bereinigt KI-Output und User-Input gegen XSS.
-    Behält Zeilenumbrüche als <br> bei.
-    """
+    """Bereinigt KI-Output gegen XSS."""
     if not text:
         return ""
-    # Zeilenumbrüche zuerst schützen
     text = text.replace("\n", "<br>")
-    # bleach bereinigt alles nicht Erlaubte
     return bleach.clean(
         text,
         tags=ERLAUBTE_TAGS,
@@ -73,10 +55,7 @@ def xss_clean(text: str) -> str:
 
 
 def xss_text(text: str) -> str:
-    """
-    Für reinen Text – KEIN HTML erlaubt.
-    Für Formulareingaben (Firma, Position, etc.)
-    """
+    """Für reinen Text – kein HTML erlaubt."""
     if not text:
         return ""
     return bleach.clean(text, tags=[], strip=True)
@@ -87,44 +66,48 @@ def xss_text(text: str) -> str:
 # ─────────────────────────────────────────────────────────────────
 
 def init_security(app):
-    """
-    Initialisiert alle Security-Komponenten.
-    Wird in webapp.py aufgerufen.
-    """
-    # ── B2: CSRF ─────────────────────────────────────────────────
+    """Initialisiert alle Security-Komponenten."""
+
+    # B2: CSRF
     csrf.init_app(app)
 
-    # ── B1: Rate Limiter ─────────────────────────────────────────
+    # B1: Rate Limiter
     limiter.init_app(app)
 
-    # ── B3: Secure Cookies & Session ─────────────────────────────
-IS_PROD = os.environ.get("RENDER")
+    # B3: Secure Cookies
+    IS_PROD = os.environ.get("RENDER")
 
-app.config.update(
-    SESSION_COOKIE_HTTPONLY  = True,
-    SESSION_COOKIE_SAMESITE  = "Lax",
-    SESSION_COOKIE_SECURE    = bool(IS_PROD),
-    WTF_CSRF_TIME_LIMIT      = 3600,
-    WTF_CSRF_SSL_STRICT      = False,
-    SEND_FILE_MAX_AGE_DEFAULT = 0,
-)
-    # ── B3: Security Headers ──────────────────────────────────────
+    app.config.update(
+        SESSION_COOKIE_HTTPONLY   = True,
+        SESSION_COOKIE_SAMESITE   = "Lax",
+        SESSION_COOKIE_SECURE     = bool(IS_PROD),
+        WTF_CSRF_TIME_LIMIT       = 3600,
+        WTF_CSRF_SSL_STRICT       = False,
+        SEND_FILE_MAX_AGE_DEFAULT = 0,
+    )
+
+    # B3: Security Headers
     @app.after_request
     def security_headers(response):
-        response.headers["X-Content-Type-Options"]  = "nosniff"
-        response.headers["X-Frame-Options"]          = "SAMEORIGIN"
-        response.headers["X-XSS-Protection"]         = "1; mode=block"
-        response.headers["Referrer-Policy"]           = "strict-origin-when-cross-origin"
-        response.headers["Permissions-Policy"]        = (
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"]         = "SAMEORIGIN"
+        response.headers["X-XSS-Protection"]        = "1; mode=block"
+        response.headers["Referrer-Policy"]          = (
+            "strict-origin-when-cross-origin"
+        )
+        response.headers["Permissions-Policy"] = (
             "geolocation=(), microphone=(), camera=()"
         )
-        # CSP – Content Security Policy
-        response.headers["Content-Security-Policy"]  = (
+        response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline'; "
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "script-src 'self' 'unsafe-inline' "
+            "https://cdn.jsdelivr.net "
+            "https://api.qrserver.com; "
+            "style-src 'self' 'unsafe-inline' "
+            "https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com; "
-            "img-src 'self' data: blob:; "
+            "img-src 'self' data: blob: "
+            "https://api.qrserver.com; "
             "connect-src 'self'; "
             "frame-ancestors 'self';"
         )

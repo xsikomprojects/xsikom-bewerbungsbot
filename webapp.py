@@ -1,17 +1,17 @@
 """
-XsiKOM-BewerbungsBOT v10.0 MODULAR
+XsiKOM-BewerbungsBOT v10.0 MODULAR + SECURE
 Template und Funktionen sind in shared.py!
 """
-from dotenv import load_dotenv
-load_dotenv()
 import os
 import secrets
 import stripe
-from shared import dbi, aa, GK, H, DB, hp, ki, pl
+from dotenv import load_dotenv
 from datetime import timedelta
 from flask import Flask, send_from_directory, make_response
+from shared import dbi, aa, GK, H, DB, hp, ki, pl
 from security_middleware import init_security
 
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
@@ -20,11 +20,10 @@ app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
 
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
 
-# ── Security initialisieren ───────────────────────────────────────
+# ── Security ──────────────────────────────────────────────────────
 init_security(app)
 
-
-# ── Routes registrieren ───────────────────────────────────────────
+# ── Routes ───────────────────────────────────────────────────────
 from routes_auth   import register_auth_routes
 from routes_main   import register_main_routes
 from routes_bots   import register_bot_routes

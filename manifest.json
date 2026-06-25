@@ -1,20 +1,36 @@
 {
-    "name": "XsiKOM-BewerbungsBOT",
-    "short_name": "XsiKOM Bot",
-    "description": "Dein KI-Assistent fuer IT-Bewerbungen und Praktika. Mit Aaliyah KI, Lebenslauf-Editor und Bewerbungs-Tracking.",
+    "name": "XsiKOM – KI Bewerbung & Jobsuche",
+    "short_name": "XsiKOM",
+    "description": "Jobs finden, Bewerbungen mit KI schreiben und schneller durchstarten. 3 KI-Bots in einer App.",
     "id": "/",
     "start_url": "/",
     "display": "standalone",
     "display_override": ["standalone", "minimal-ui"],
     "orientation": "portrait",
-    "theme_color": "#00B4D8",
-    "background_color": "#0F1923",
+    "theme_color": "#00D9FF",
+    "background_color": "#0A0E1A",
     "scope": "/",
     "lang": "de",
     "dir": "ltr",
     "categories": ["productivity", "business", "education"],
     "iarc_rating_id": "",
     "prefer_related_applications": false,
+    "screenshots": [
+        {
+            "src": "/static/play-feature-1024x500.png",
+            "sizes": "1024x500",
+            "type": "image/png",
+            "form_factor": "wide",
+            "label": "XsiKOM Dashboard"
+        },
+        {
+            "src": "/static/play-store-feature.png",
+            "sizes": "1024x500",
+            "type": "image/png",
+            "form_factor": "wide",
+            "label": "XsiKOM Features"
+        }
+    ],
     "icons": [
         {
             "src": "/static/icon-72.png",
@@ -90,6 +106,13 @@
             "short_name": "Aaliyah",
             "description": "Chat mit KI",
             "url": "/aaliyah",
+            "icons": [{"src": "/static/icon-96.png", "sizes": "96x96"}]
+        },
+        {
+            "name": "Jobs suchen",
+            "short_name": "AVINU",
+            "description": "Jobs finden",
+            "url": "/avinu",
             "icons": [{"src": "/static/icon-96.png", "sizes": "96x96"}]
         },
         {
