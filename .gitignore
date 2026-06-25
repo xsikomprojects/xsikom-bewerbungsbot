@@ -1,19 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
 venv/
 venv311/
-__pycache__/
-*.pyc
-*.db
-*.log
-.schluessel
-benutzer_daten/
-unterlagen/
-anschreiben/
-charts/
-kalender/
-*.xlsx
-*.pdf
-audit.log
-bot_log.txt
-icon.ico
-icon.png
 .env
+
+# Datenbank
+*.db
+*.sqlite
+
+# Uploads
+uploads/
+
+# Logs
+*.log
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Passwörter
+xsikom_passwoerter.txt
+
+# Alte Dateien
+manifest (1).json
+app.py
+app_simple.py
+auto_start.py
+debug.py
+debug_app.py
+test_fenster.py
+windows_aufgabe.py

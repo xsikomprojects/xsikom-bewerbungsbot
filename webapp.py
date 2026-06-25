@@ -1,13 +1,16 @@
 """
-XsiKOM-BewerbungsBOT v9.0 MODULAR
+XsiKOM-BewerbungsBOT v10.0 MODULAR
 Template und Funktionen sind in shared.py!
 """
+from dotenv import load_dotenv
+load_dotenv()
 import os
 import secrets
 import stripe
 from shared import dbi, aa, GK, H, DB, hp, ki, pl
 from datetime import timedelta
 from flask import Flask, send_from_directory, make_response
+from security_middleware import init_security
 
 
 app = Flask(__name__)
@@ -16,6 +19,9 @@ app.permanent_session_lifetime = timedelta(hours=2)
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
 
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
+
+# ── Security initialisieren ───────────────────────────────────────
+init_security(app)
 
 
 # ── Routes registrieren ───────────────────────────────────────────
@@ -37,13 +43,17 @@ register_extra_routes(app)
 # ── PWA & Static ──────────────────────────────────────────────────
 @app.route("/manifest.json")
 def manifest():
-    return send_from_directory(".", "manifest.json", mimetype="application/json")
+    return send_from_directory(
+        ".", "manifest.json", mimetype="application/json"
+    )
 
 
 @app.route("/sw.js")
 def service_worker():
     r = make_response(
-        send_from_directory(".", "sw.js", mimetype="application/javascript")
+        send_from_directory(
+            ".", "sw.js", mimetype="application/javascript"
+        )
     )
     r.headers["Service-Worker-Allowed"] = "/"
     return r
@@ -57,7 +67,8 @@ def static_files(filename):
 @app.route("/.well-known/assetlinks.json")
 def assetlinks():
     return send_from_directory(
-        ".well-known", "assetlinks.json", mimetype="application/json"
+        ".well-known", "assetlinks.json",
+        mimetype="application/json"
     )
 
 
@@ -67,7 +78,7 @@ aa()
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("  XsiKOM v9.0 MODULAR")
+    print("  XsiKOM v10.0 MODULAR + SECURE")
     print("  KI:", "ONLINE" if GK else "OFFLINE")
     print("  URL: http://localhost:5000")
     print("=" * 60)

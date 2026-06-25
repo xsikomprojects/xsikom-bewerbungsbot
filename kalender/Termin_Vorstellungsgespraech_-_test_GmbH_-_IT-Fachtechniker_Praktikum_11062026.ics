@@ -1,0 +1,22 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//BewerbungsBot//Komi Tevi//DE
+BEGIN:VEVENT
+DTSTART:20260611T140000
+DTEND:20260611T150000
+SUMMARY:Vorstellungsgespraech - test GmbH - IT-Fachtechniker Praktikum
+DESCRIPTION:Vorstellungsgespraech bei test GmbH
+Position: IT-Fachtechniker / Netzwerktechniker
+Kontakt: Mustermann
+Bewerber: Komi Tevi
+Tel: +49 178 8977320
+LOCATION:Barbarossaring 0, 55118 Mainz
+UID:bewerbung_20260610180746@bot
+STATUS:CONFIRMED
+BEGIN:VALARM
+TRIGGER:-PT30M
+ACTION:DISPLAY
+DESCRIPTION:Erinnerung: 30 Min
+END:VALARM
+END:VEVENT
+END:VCALENDAR

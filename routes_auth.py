@@ -1,8 +1,9 @@
 """
 Auth Routes: Login, Register, Logout, Password-Reset
-Alle Imports kommen aus shared.py – kein Import aus webapp.py!
+Sprint 1: Rate-Limiting + XSS-Schutz + CSRF
 """
 from flask import render_template_string, request, redirect, session
+from flask_wtf.csrf import generate_csrf
 from shared import H, DB, bp, ba, hp, CE
 from security import (
     create_password_reset_token,
@@ -10,6 +11,7 @@ from security import (
     use_reset_token,
     audit_log,
 )
+from security_middleware import limiter, xss_text
 import sqlite3
 
 
@@ -18,7 +20,6 @@ import sqlite3
 # ─────────────────────────────────────────────────────────────────
 
 def _db_connect():
-    """Öffnet DB-Verbindung und gibt (conn, cursor) zurück."""
     cn = sqlite3.connect(DB)
     cc = cn.cursor()
     return cn, cc
@@ -47,15 +48,20 @@ def register_auth_routes(app):
     # ════════════════════════════════════════════════════════════
 
     @app.route("/login", methods=["GET", "POST"])
+    @limiter.limit("5 per minute")
     def login():
-        msg = ""
+        msg   = ""
+        token = generate_csrf()
 
         if request.method == "POST":
-            username = request.form.get("username", "").strip()
+            username = xss_text(
+                request.form.get("username", "").strip()
+            )
             password = request.form.get("password", "").strip()
-            r = bp(username, password)
+            r        = bp(username, password)
 
             if r:
+                session.permanent   = True
                 session["user_id"]  = r["id"]
                 session["username"] = r["benutzername"]
                 session["vorname"]  = r["vorname"]
@@ -73,10 +79,13 @@ def register_auth_routes(app):
             '<h1 style="text-align:center">🔐 Anmelden</h1>'
             + msg +
             '<form method="POST">'
+            f'<input type="hidden" name="csrf_token" value="{token}">'
             '<input type="text" name="username" '
-            'placeholder="Benutzername" required>'
+            'placeholder="Benutzername" required '
+            'autocomplete="username">'
             '<input type="password" name="password" '
-            'placeholder="Passwort" required>'
+            'placeholder="Passwort" required '
+            'autocomplete="current-password">'
             '<button type="submit" class="bt b1" style="width:100%">'
             '🚀 Anmelden</button>'
             '</form>'
@@ -95,28 +104,32 @@ def register_auth_routes(app):
     # ════════════════════════════════════════════════════════════
 
     @app.route("/register", methods=["GET", "POST"])
+    @limiter.limit("3 per minute")
     def register():
-        msg = ""
+        msg   = ""
+        token = generate_csrf()
 
         if request.method == "POST":
-            u  = request.form.get("username",   "").strip()
-            p  = request.form.get("password",   "").strip()
-            e  = request.form.get("email",      "").strip()
-            vn = request.form.get("vorname",    "").strip()
-            nn = request.form.get("nachname",   "").strip()
-            kt = request.form.get("kunde_typ",  "privat")
-            ds = request.form.get("datenschutz")
-            ag = request.form.get("agb")
-            wr = request.form.get("widerruf")
+            u  = xss_text(request.form.get("username",  "").strip())
+            p  =          request.form.get("password",  "").strip()
+            e  = xss_text(request.form.get("email",     "").strip())
+            vn = xss_text(request.form.get("vorname",   "").strip())
+            nn = xss_text(request.form.get("nachname",  "").strip())
+            kt = xss_text(request.form.get("kunde_typ", "privat"))
+            ds =          request.form.get("datenschutz")
+            ag =          request.form.get("agb")
+            wr =          request.form.get("widerruf")
 
             if not all([u, p, e, ds, ag, wr]):
-                msg = '<div class="al ae">❌ Alle Felder!</div>'
+                msg = '<div class="al ae">❌ Alle Felder ausfuellen!</div>'
             elif len(p) < 6:
                 msg = '<div class="al ae">❌ Min. 6 Zeichen!</div>'
+            elif "@" not in e or "." not in e:
+                msg = '<div class="al ae">❌ Ungueltige E-Mail!</div>'
             elif ba(u, p, e, vn, nn, kt):
                 return redirect("/login")
             else:
-                msg = '<div class="al ae">❌ Name vergeben!</div>'
+                msg = '<div class="al ae">❌ Name bereits vergeben!</div>'
 
         c = (
             '<div style="max-width:600px;margin:30px auto">'
@@ -124,6 +137,7 @@ def register_auth_routes(app):
             '<h1>✨ Registrieren</h1>'
             + msg +
             '<form method="POST">'
+            f'<input type="hidden" name="csrf_token" value="{token}">'
             '<select name="kunde_typ" required>'
             '<option value="privat">👤 Privat</option>'
             '<option value="firma">🏢 Firma</option>'
@@ -131,7 +145,7 @@ def register_auth_routes(app):
             '<input type="text" name="username" '
             'placeholder="Benutzername" required>'
             '<input type="password" name="password" '
-            'placeholder="Passwort" required>'
+            'placeholder="Passwort (min. 6 Zeichen)" required>'
             '<input type="email" name="email" '
             'placeholder="E-Mail" required>'
             '<input type="text" name="vorname" '
@@ -140,21 +154,15 @@ def register_auth_routes(app):
             'placeholder="Nachname">'
             '<div style="margin-top:20px;padding:20px;'
             'background:rgba(10,14,26,0.5);border-radius:12px">'
-            '<p>'
-            '<input type="checkbox" name="datenschutz" '
+            '<p><input type="checkbox" name="datenschutz" '
             'required style="width:auto"> '
-            '<a href="/datenschutz" target="_blank">Datenschutz</a>'
-            '</p>'
-            '<p>'
-            '<input type="checkbox" name="agb" '
+            '<a href="/datenschutz" target="_blank">Datenschutz</a></p>'
+            '<p><input type="checkbox" name="agb" '
             'required style="width:auto"> '
-            '<a href="/agb" target="_blank">AGB</a>'
-            '</p>'
-            '<p>'
-            '<input type="checkbox" name="widerruf" '
+            '<a href="/agb" target="_blank">AGB</a></p>'
+            '<p><input type="checkbox" name="widerruf" '
             'required style="width:auto"> '
-            '<a href="/widerruf" target="_blank">Widerruf</a>'
-            '</p>'
+            '<a href="/widerruf" target="_blank">Widerruf</a></p>'
             '</div>'
             '<button type="submit" class="bt b2" style="width:100%">'
             '🚀 Account erstellen</button>'
@@ -181,11 +189,13 @@ def register_auth_routes(app):
     # ════════════════════════════════════════════════════════════
 
     @app.route("/password-reset", methods=["GET", "POST"])
+    @limiter.limit("3 per hour")
     def password_reset_request():
-        msg = ""
+        msg   = ""
+        token = generate_csrf()
 
         if request.method == "POST":
-            email = request.form.get("email", "").strip()
+            email  = xss_text(request.form.get("email", "").strip())
             cn, cc = _db_connect()
             cc.execute(
                 "SELECT id FROM benutzer WHERE email=?", (email,)
@@ -194,55 +204,55 @@ def register_auth_routes(app):
             cn.close()
 
             if u:
-                token = create_password_reset_token(u[0])
-                link  = f"{request.host_url}password-reset/{token}"
-                msg   = (
-                    '<div class="al ao">'
-                    f'🔑 Reset-Link: <a href="{link}">{link}</a>'
-                    '</div>'
+                t2   = create_password_reset_token(u[0])
+                link = f"{request.host_url}password-reset/{t2}"
+                msg  = (
+                    f'<div class="al ao">'
+                    f'🔑 <a href="{link}">Reset-Link</a>'
+                    f'</div>'
                 )
             else:
-                # Kein Hinweis ob E-Mail existiert (Sicherheit)
                 msg = (
                     '<div class="al ao">'
-                    '📧 Falls die E-Mail bekannt ist, '
-                    'wurde ein Link verschickt.</div>'
+                    '📧 Falls bekannt, wurde ein Link verschickt.'
+                    '</div>'
                 )
 
         c = (
             '<div style="max-width:450px;margin:60px auto">'
             '<div class="cd">'
             '<h1>🔑 Passwort vergessen</h1>'
-            '<p style="color:var(--t3)">Gib deine E-Mail ein – '
-            'du bekommst einen Reset-Link.</p>'
             + msg +
             '<form method="POST">'
+            f'<input type="hidden" name="csrf_token" value="{token}">'
             '<input type="email" name="email" '
             'placeholder="deine@email.de" required>'
             '<button type="submit" class="bt b1" style="width:100%">'
             '📧 Link anfordern</button>'
             '</form>'
             '<p style="text-align:center;margin-top:20px">'
-            '<a href="/login">← Zurück zum Login</a></p>'
+            '<a href="/login">← Login</a></p>'
             '</div></div>'
         )
         return render_template_string(H, content=c, user=None)
 
     # ════════════════════════════════════════════════════════════
-    # PASSWORD RESET – NEUES PASSWORT SETZEN
+    # PASSWORD RESET – NEUES PASSWORT
     # ════════════════════════════════════════════════════════════
 
-    @app.route("/password-reset/<token>", methods=["GET", "POST"])
-    def password_reset_new(token):
-        uid = verify_reset_token(token)
+    @app.route("/password-reset/<reset_token>", methods=["GET", "POST"])
+    @limiter.limit("5 per hour")
+    def password_reset_new(reset_token):
+        uid        = verify_reset_token(reset_token)
+        csrf_token = generate_csrf()
 
         if not uid:
             c = (
                 '<div style="max-width:450px;margin:60px auto">'
                 '<div class="cd">'
                 '<h1>❌ Link ungueltig</h1>'
-                '<p style="color:var(--t3)">Der Link ist abgelaufen '
-                'oder wurde bereits verwendet.</p>'
+                '<p style="color:var(--t3)">Abgelaufen oder '
+                'bereits verwendet.</p>'
                 '<a href="/password-reset" class="bt b1">'
                 '🔑 Neuen Link anfordern</a>'
                 '</div></div>'
@@ -252,13 +262,13 @@ def register_auth_routes(app):
         msg = ""
 
         if request.method == "POST":
-            new  = request.form.get("new_password", "")
+            new  = request.form.get("new_password",     "")
             conf = request.form.get("confirm_password", "")
 
             if len(new) < 8:
                 msg = '<div class="al ae">❌ Min. 8 Zeichen!</div>'
             elif new != conf:
-                msg = '<div class="al ae">❌ Passwoerter unterschiedlich!</div>'
+                msg = '<div class="al ae">❌ Unterschiedlich!</div>'
             else:
                 cn, cc = _db_connect()
                 cc.execute(
@@ -267,22 +277,23 @@ def register_auth_routes(app):
                 )
                 cn.commit()
                 cn.close()
-                use_reset_token(token)
+                use_reset_token(reset_token)
                 return redirect("/login")
 
         c = (
             '<div style="max-width:450px;margin:60px auto">'
             '<div class="cd">'
             '<h1>🔑 Neues Passwort</h1>'
-            '<p style="color:var(--t3)">Min. 8 Zeichen.</p>'
             + msg +
             '<form method="POST">'
+            f'<input type="hidden" name="csrf_token" '
+            f'value="{csrf_token}">'
             '<input type="password" name="new_password" '
             'placeholder="Neues Passwort" required>'
             '<input type="password" name="confirm_password" '
             'placeholder="Bestaetigen" required>'
             '<button type="submit" class="bt b2" style="width:100%">'
-            '✅ Passwort speichern</button>'
+            '✅ Speichern</button>'
             '</form>'
             '</div></div>'
         )

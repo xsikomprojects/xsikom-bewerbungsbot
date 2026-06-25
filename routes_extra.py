@@ -1,5 +1,5 @@
 """
-Extra Routes: Premium, PDF, Tutorial, Updates, Install
+Extra Routes: Premium, PDF, Tutorial, Updates, Install, Landing
 Alle Imports kommen aus shared.py – kein Import aus webapp.py!
 """
 from flask import render_template_string, request, redirect, session, send_file
@@ -42,21 +42,210 @@ def _kacheln(items):
     return '<div class="gr">' + html + '</div>'
 
 
-def _tutorial_login(fn):
-    """Decorator-Ersatz: prüft Login für Tutorial-Routen."""
-    def wrapper(*args, **kwargs):
-        r = _login_required()
-        if r: return r
-        return fn(*args, **kwargs)
-    wrapper.__name__ = fn.__name__
-    return wrapper
-
-
 # ─────────────────────────────────────────────────────────────────
 # ROUTE-REGISTRIERUNG
 # ─────────────────────────────────────────────────────────────────
 
 def register_extra_routes(app):
+
+    # ════════════════════════════════════════════════════════════
+    # LANDING PAGE
+    # ════════════════════════════════════════════════════════════
+
+    @app.route("/landing")
+    def landing():
+        c = (
+            # ── Hero ─────────────────────────────────────────────
+            '<section style="text-align:center;padding:40px 0 20px">'
+            '<h1>Bewerben ohne Stress –<br>'
+            'mit KI, Jobsuche und Lebenslauf in einer App.</h1>'
+            '<p style="font-size:18px;max-width:850px;'
+            'margin:0 auto 25px;color:var(--t2)">'
+            'XsiKOM hilft dir, Jobs zu finden, Bewerbungen schneller '
+            'zu schreiben und professioneller aufzutreten. '
+            'Fuer Praktikum, Ausbildung, Studium und Karrierewechsel.'
+            '</p>'
+            '<div style="display:flex;gap:15px;'
+            'justify-content:center;flex-wrap:wrap">'
+            '<a href="/register" class="bt b2">🚀 Kostenlos starten</a>'
+            '<a href="/premium" class="bt b1">💎 Premium entdecken</a>'
+            '<a href="/install" class="bt b5">📱 App installieren</a>'
+            '</div>'
+            '</section>'
+
+            # ── Vertrauenszeile ───────────────────────────────────
+            '<div class="cd" style="text-align:center;margin:20px 0">'
+            '<p style="font-size:16px">'
+            '<strong>3 KI-Bots</strong> · '
+            '<strong>Jobs weltweit</strong> · '
+            '<strong>Lebenslauf-Generator</strong> · '
+            '<strong>Kostenloser Start</strong>'
+            '</p>'
+            '</div>'
+
+            # ── Warum XsiKOM ──────────────────────────────────────
+            '<h2 style="margin-top:40px">🤖 Warum XsiKOM?</h2>'
+            '<div class="gr">'
+
+            '<div class="cd">'
+            '<h3>🤖 Aaliyah</h3>'
+            '<p>Deine KI-Beraterin fuer Anschreiben, '
+            'Lebenslauf, Interview und Karrierefragen.</p>'
+            '<a href="/aaliyah" class="bt b5" '
+            'style="padding:8px 18px;font-size:13px">'
+            'Jetzt fragen</a>'
+            '</div>'
+
+            '<div class="cd">'
+            '<h3>⚡ AVINU</h3>'
+            '<p>Finde passende Jobs nach Branche, '
+            'Beruf, Standort und sogar international.</p>'
+            '<a href="/avinu" class="bt b1" '
+            'style="padding:8px 18px;font-size:13px">'
+            'Jobs suchen</a>'
+            '</div>'
+
+            '<div class="cd">'
+            '<h3>🤖 XSI</h3>'
+            '<p>Erstelle Bewerbungen schneller mit KI, '
+            'Vorlagen und strukturiertem Workflow.</p>'
+            '<a href="/xsi" class="bt b2" '
+            'style="padding:8px 18px;font-size:13px">'
+            'Bewerben</a>'
+            '</div>'
+
+            '</div>'
+
+            # ── Fuer wen ──────────────────────────────────────────
+            '<h2 style="margin-top:40px">👥 Fuer wen ist XsiKOM?</h2>'
+            '<div class="gr">'
+
+            '<div class="sc">'
+            '<div class="si">🎓</div>'
+            '<div class="sv">Schueler</div>'
+            '<div class="sl">Praktikum & Ausbildung</div>'
+            '</div>'
+
+            '<div class="sc">'
+            '<div class="si">🧑‍💻</div>'
+            '<div class="sv">Studenten</div>'
+            '<div class="sl">Werkstudent & Berufseinstieg</div>'
+            '</div>'
+
+            '<div class="sc">'
+            '<div class="si">🚀</div>'
+            '<div class="sv">Wechsler</div>'
+            '<div class="sl">Neustart & Karrierewechsel</div>'
+            '</div>'
+
+            '</div>'
+
+            # ── So funktionierts ──────────────────────────────────
+            '<h2 style="margin-top:40px">⚡ So funktionierts</h2>'
+            '<div class="gr">'
+
+            '<div class="cd" style="text-align:center">'
+            '<div style="font-size:40px">1️⃣</div>'
+            '<h3>Profil ausfuellen</h3>'
+            '<p>Hinterlege deine Daten einmal zentral in XsiKOM.</p>'
+            '</div>'
+
+            '<div class="cd" style="text-align:center">'
+            '<div style="font-size:40px">2️⃣</div>'
+            '<h3>Jobs suchen</h3>'
+            '<p>Nutze AVINU fuer passende Stellen '
+            'lokal oder international.</p>'
+            '</div>'
+
+            '<div class="cd" style="text-align:center">'
+            '<div style="font-size:40px">3️⃣</div>'
+            '<h3>Bewerbung erstellen</h3>'
+            '<p>XSI hilft dir mit KI und Vorlagen '
+            'beim Anschreiben.</p>'
+            '</div>'
+
+            '<div class="cd" style="text-align:center">'
+            '<div style="font-size:40px">4️⃣</div>'
+            '<h3>Durchstarten</h3>'
+            '<p>Mehr Uebersicht, weniger Stress, '
+            'schnellere Bewerbungen.</p>'
+            '</div>'
+
+            '</div>'
+
+            # ── Pricing ───────────────────────────────────────────
+            '<h2 style="margin-top:40px">💰 Free oder Premium</h2>'
+            '<div class="gr">'
+
+            '<div class="cd">'
+            '<h3>🆓 Free</h3>'
+            '<p style="color:var(--gn);font-size:22px;font-weight:700">'
+            '0 EUR</p>'
+            '<ul style="padding-left:25px;line-height:2.2">'
+            '<li>✅ KI-Beratung</li>'
+            '<li>✅ Basis Jobsuche</li>'
+            '<li>✅ Lebenslauf-Editor</li>'
+            '<li>✅ Kostenlos nutzbar</li>'
+            '<li>❌ Alle Vorlagen</li>'
+            '<li>❌ Internationale Jobs</li>'
+            '</ul>'
+            '<a href="/register" class="bt b1" '
+            'style="width:100%;margin-top:15px">'
+            '🚀 Kostenlos starten</a>'
+            '</div>'
+
+            '<div class="cd" style="border:2px solid var(--yl)">'
+            '<span class="bg">⭐ BELIEBT</span>'
+            '<h3 style="margin-top:10px">💎 Premium</h3>'
+            '<p style="color:var(--yl);font-size:22px;font-weight:700">'
+            '1.99 EUR/Monat</p>'
+            '<ul style="padding-left:25px;line-height:2.2">'
+            '<li>✅ Alles aus Free</li>'
+            '<li>✅ Alle Vorlagen</li>'
+            '<li>✅ Mehr Automatisierung</li>'
+            '<li>✅ Internationale Jobs</li>'
+            '<li>✅ Erweiterte Funktionen</li>'
+            '<li>✅ PDF-Generator</li>'
+            '</ul>'
+            '<a href="/premium" class="bt b3" '
+            'style="width:100%;margin-top:15px">'
+            '💎 Premium holen</a>'
+            '</div>'
+
+            '</div>'
+
+            # ── Sicherheit ────────────────────────────────────────
+            '<div class="cd" style="margin-top:30px">'
+            '<h3>🔒 Sicherheit & Datenschutz</h3>'
+            '<div class="gr">'
+            '<p>✅ CSRF-Schutz</p>'
+            '<p>✅ Rate-Limiting</p>'
+            '<p>✅ XSS-Schutz</p>'
+            '<p>✅ Sichere Sessions</p>'
+            '<p>✅ DSGVO-orientiert</p>'
+            '<p>✅ AES-256</p>'
+            '</div>'
+            '</div>'
+
+            # ── Final CTA ─────────────────────────────────────────
+            '<div class="cd" style="text-align:center;margin-top:40px;'
+            'background:linear-gradient(135deg,rgba(0,217,255,0.1),'
+            'rgba(139,92,246,0.1));border:1px solid var(--cy)">'
+            '<h2>Dein naechster Job wartet nicht.</h2>'
+            '<p style="font-size:16px;margin-bottom:25px">'
+            'Starte jetzt mit XsiKOM und bring deine '
+            'Bewerbung aufs naechste Level.'
+            '</p>'
+            '<div style="display:flex;gap:15px;'
+            'justify-content:center;flex-wrap:wrap">'
+            '<a href="/register" class="bt b2">'
+            '🚀 Jetzt kostenlos starten</a>'
+            '<a href="/tutorial" class="bt b1">'
+            '📚 Tutorial ansehen</a>'
+            '</div>'
+            '</div>'
+        )
+        return render_template_string(H, content=c, user=_user_or_none())
 
     # ════════════════════════════════════════════════════════════
     # PREMIUM
@@ -68,10 +257,9 @@ def register_extra_routes(app):
             '<h1>💎 Premium</h1>'
             '<div class="gr">'
 
-            # ── Free Plan ────────────────────────────────────────
             '<div class="cd">'
             '<h2>🆓 Free</h2>'
-            '<h3>0 €</h3>'
+            '<h3>0 EUR</h3>'
             '<ul style="list-style:none;padding:0;line-height:2.2">'
             '<li>✓ 5 Bewerbungen/Monat</li>'
             '<li>✓ Aaliyah KI Chat</li>'
@@ -84,11 +272,10 @@ def register_extra_routes(app):
             '<button class="bt b1" style="width:100%">Aktuell</button>'
             '</div>'
 
-            # ── Premium Plan ─────────────────────────────────────
             '<div class="cd" style="border:2px solid var(--yl)">'
             '<span class="bg">⭐ BELIEBT</span>'
             '<h2 style="margin-top:10px">💎 Premium</h2>'
-            '<h3>1.99 €/Monat</h3>'
+            '<h3>1.99 EUR/Monat</h3>'
             '<ul style="list-style:none;padding:0;line-height:2.2">'
             '<li>✓ UNBEGRENZTE Bewerbungen</li>'
             '<li>✓ Alle 3 KI-Bots</li>'
@@ -132,19 +319,17 @@ def register_extra_routes(app):
                 return render_template_string(H, content=c, user=session)
             msg = '<div class="al ae">❌ Falscher Code!</div>'
 
-        # ── Stripe Button ────────────────────────────────────────
         stripe_btn = ""
         if stripe.api_key and os.environ.get("STRIPE_PRICE_MONAT"):
             stripe_btn = (
                 '<a href="/stripe-checkout" class="bt b3" '
                 'style="width:100%;margin-top:15px">'
-                '💳 Mit Kreditkarte (1.99€)</a>'
+                '💳 Mit Kreditkarte (1.99 EUR)</a>'
             )
 
         c = (
             '<h1>🔐 Premium aktivieren</h1>'
             + msg +
-
             '<div class="cd">'
             '<h3>🔑 Mit Code</h3>'
             '<form method="POST">'
@@ -153,13 +338,11 @@ def register_extra_routes(app):
             '<button type="submit" class="bt b2" style="width:100%">'
             '🚀 Aktivieren</button>'
             '</form></div>'
-
             '<div class="cd">'
             '<h3>💳 Mit Zahlung</h3>'
             + (stripe_btn if stripe_btn else
                '<p style="color:var(--t3)">Stripe wird konfiguriert...</p>') +
             '</div>'
-
             '<div class="al ai">'
             '💡 Admin-Code: XSIKOM-ADMIN-2026-PREMIUM'
             '</div>'
@@ -270,7 +453,6 @@ def register_extra_routes(app):
             except Exception as e:
                 msg = '<div class="al ae">❌ ' + str(e)[:100] + '</div>'
 
-        # ── Vorlagen laden ───────────────────────────────────────
         try:
             from pdf_generator import vorlagen_info
             vi = vorlagen_info()
@@ -379,7 +561,6 @@ def register_extra_routes(app):
 
         c = (
             '<h1>🤖 Aaliyah Tutorial</h1>'
-
             '<div class="cd"><h3>Was kann Aaliyah?</h3>'
             '<ul style="padding-left:25px;line-height:2.2">'
             '<li>Bewerbungstipps & Anschreiben</li>'
@@ -388,13 +569,11 @@ def register_extra_routes(app):
             '<li>Gehaltsverhandlung</li>'
             '<li>IT-Fachwissen (Netzwerk, TCP/IP, etc.)</li>'
             '</ul></div>'
-
             '<div class="cd"><h3>Beispiel-Fragen</h3>'
             '<p style="color:var(--cy)">"Wie schreibe ich ein IT-Anschreiben?"</p>'
             '<p style="color:var(--cy)">"Wie verhandle ich Gehalt?"</p>'
             '<p style="color:var(--cy)">"Erklaere TCP/IP fuer mein Interview"</p>'
             '</div>'
-
             '<a href="/aaliyah" class="bt b5">🤖 Aaliyah fragen</a> '
             '<a href="/tutorial" class="bt b1">← Tutorial</a>'
         )
@@ -407,7 +586,6 @@ def register_extra_routes(app):
 
         c = (
             '<h1>⚡ AVINU Tutorial</h1>'
-
             '<div class="cd"><h3>So funktioniert AVINU</h3>'
             '<ol style="padding-left:25px;line-height:2.2">'
             '<li>📂 Branche waehlen (14 verfuegbar)</li>'
@@ -417,7 +595,6 @@ def register_extra_routes(app):
             '<li>🌍 Optional: International anklicken</li>'
             '<li>🚀 Jobs suchen klicken!</li>'
             '</ol></div>'
-
             '<div class="cd"><h3>Nach der Suche</h3>'
             '<ul style="padding-left:25px;line-height:2.2">'
             '<li>⭐ Favorit markieren</li>'
@@ -425,7 +602,6 @@ def register_extra_routes(app):
             '<li>🔗 Original-Stellenanzeige ansehen</li>'
             '<li>Filter: Alle / Offen / Beworben / Favoriten</li>'
             '</ul></div>'
-
             '<a href="/avinu" class="bt b1">⚡ AVINU starten</a> '
             '<a href="/tutorial" class="bt b1">← Tutorial</a>'
         )
@@ -438,9 +614,7 @@ def register_extra_routes(app):
 
         c = (
             '<h1>🤖 XSI Bot Tutorial</h1>'
-
             '<div class="cd"><h3>Vorbereitung</h3>'
-            '<p>Bevor du XSI nutzt, lade hoch:</p>'
             '<ul style="padding-left:25px;line-height:2.2">'
             '<li>📄 Lebenslauf als PDF</li>'
             '<li>📜 Zeugnisse als PDF</li>'
@@ -449,7 +623,6 @@ def register_extra_routes(app):
             '</ul>'
             '<p>Und fuelle dein <a href="/lebenslauf">Profil</a> aus!</p>'
             '</div>'
-
             '<div class="cd"><h3>Bewerbung erstellen</h3>'
             '<ol style="padding-left:25px;line-height:2.2">'
             '<li>Art waehlen (Job/Praktikum/Ausbildung/...)</li>'
@@ -460,12 +633,10 @@ def register_extra_routes(app):
             '<li>Vorlage waehlen</li>'
             '<li>📝 Entwurf ODER 🚀 Sofort senden!</li>'
             '</ol></div>'
-
             '<div class="al ao">'
             '✅ XSI erstellt KI-Anschreiben + haengt '
             'ALLE Unterlagen automatisch an!'
             '</div>'
-
             '<a href="/xsi/neu" class="bt b2">🤖 XSI starten</a> '
             '<a href="/tutorial" class="bt b1">← Tutorial</a>'
         )
@@ -523,21 +694,21 @@ def register_extra_routes(app):
             ("📄 Professionelle PDFs hochladen",
              "Gut formatierter Lebenslauf als PDF macht den besten Eindruck."),
             ("🖼️ Gutes Bewerbungsfoto",
-             "Professionelles Foto erhoeht die Chancen. XSI haengt es automatisch an."),
+             "Professionelles Foto erhoeht die Chancen."),
             ("🔍 Suchbegriffe variieren",
              "Probiere: IT-Praktikum, Fachinformatiker, IT-Support..."),
             ("⭐ Favoriten nutzen",
-             "Markiere interessante Jobs als Favorit. So verlierst du sie nicht."),
+             "Markiere interessante Jobs als Favorit."),
             ("🌍 International suchen",
              "Aktiviere 'International' fuer Remote-Jobs weltweit!"),
             ("📝 Erst Entwurf, dann Senden",
-             "Erstelle zuerst einen Entwurf. Pruefe das Anschreiben. Dann sende."),
+             "Erstelle zuerst einen Entwurf. Pruefe. Dann sende."),
             ("🤖 Aaliyah vor Interview",
-             "Frag Aaliyah nach Infos ueber die Firma und Interview-Fragen!"),
+             "Frag Aaliyah nach Infos ueber die Firma!"),
             ("📊 Bewerbungen tracken",
-             "Behalte den Ueberblick im XSI Dashboard ueber alle Bewerbungen."),
+             "Behalte den Ueberblick im XSI Dashboard."),
             ("💎 Premium nutzen",
-             "Mit Premium: Unbegrenzte Bewerbungen, alle Vorlagen, voller XSI Bot!"),
+             "Mit Premium: Unbegrenzte Bewerbungen, alle Vorlagen!"),
         ]
 
         c = (
@@ -559,7 +730,6 @@ def register_extra_routes(app):
         r = _login_required()
         if r: return r
 
-        # ── Update-Daten laden ───────────────────────────────────
         try:
             from auto_update import (
                 update_status, changelog_laden,
@@ -571,16 +741,15 @@ def register_extra_routes(app):
             faellig = ist_update_faellig()
         except Exception:
             st      = {
-                "version":           "9.0",
-                "letztes_update":    "---",
-                "naechstes_update":  "---",
+                "version":            "10.0",
+                "letztes_update":     "---",
+                "naechstes_update":   "---",
                 "offene_vorschlaege": 0,
             }
             cl      = []
             vs      = []
             faellig = True
 
-        # ── Changelog HTML ───────────────────────────────────────
         cl_html = "".join(
             '<div class="ui"><div>'
             f'<strong>v{c2[1]}</strong> – {str(c2[2])[:16]}'
@@ -590,7 +759,6 @@ def register_extra_routes(app):
             for c2 in cl
         ) or '<p style="color:var(--t3)">Noch keine Updates</p>'
 
-        # ── Vorschläge HTML ──────────────────────────────────────
         vs_html = "".join(
             '<div class="ui"><div>'
             + ("✅" if v[4] else "⏳")
@@ -601,7 +769,6 @@ def register_extra_routes(app):
             for v in vs
         ) or '<p style="color:var(--t3)">Keine Vorschlaege</p>'
 
-        # ── Admin: Update-Button ─────────────────────────────────
         update_btn = ""
         if session.get("rolle") == "admin":
             update_btn = (
@@ -618,34 +785,26 @@ def register_extra_routes(app):
 
         c = (
             '<h1>🔄 Updates & KI-Support</h1>'
-
             '<div class="gr">'
             '<div class="sc"><div class="si">📦</div>'
             f'<div class="sv">v{st["version"]}</div>'
             '<div class="sl">Version</div></div>'
-
             '<div class="sc"><div class="si">📅</div>'
             f'<div class="sv">{str(st["letztes_update"])[:10]}</div>'
             '<div class="sl">Letztes</div></div>'
-
             '<div class="sc"><div class="si">⏰</div>'
             f'<div class="sv">{st["naechstes_update"]}</div>'
             '<div class="sl">Naechstes</div></div>'
-
             '<div class="sc"><div class="si">💡</div>'
             f'<div class="sv">{st["offene_vorschlaege"]}</div>'
             '<div class="sl">Vorschlaege</div></div>'
             '</div>'
-
             + status_msg
             + update_btn +
-
             '<h2 style="margin-top:30px">📋 Changelog</h2>'
             '<div class="cd">' + cl_html + '</div>'
-
             '<h2>💡 KI-Vorschlaege</h2>'
             '<div class="cd">' + vs_html + '</div>'
-
             '<h2>📝 Feedback geben</h2>'
             '<div class="cd">'
             '<form method="POST" action="/updates/feedback">'
@@ -673,7 +832,6 @@ def register_extra_routes(app):
         )
         return render_template_string(H, content=c, user=session)
 
-    # ── Admin: Update jetzt starten ───────────────────────────────
     @app.route("/updates/jetzt")
     def update_jetzt():
         r = _login_required()
@@ -706,7 +864,6 @@ def register_extra_routes(app):
             )
         return render_template_string(H, content=c, user=session)
 
-    # ── Feedback speichern ────────────────────────────────────────
     @app.route("/updates/feedback", methods=["POST"])
     def update_feedback():
         r = _login_required()
@@ -723,7 +880,6 @@ def register_extra_routes(app):
                 )
         except Exception:
             pass
-
         return redirect("/updates")
 
     # ════════════════════════════════════════════════════════════
@@ -734,7 +890,6 @@ def register_extra_routes(app):
     def install():
         c = (
             '<h1>📱 App installieren</h1>'
-
             '<div class="cd">'
             '<h3>🤖 Android (Chrome)</h3>'
             '<ol style="padding-left:25px;line-height:2.5">'
@@ -744,7 +899,6 @@ def register_extra_routes(app):
             '<li>"Installieren" bestaetigen</li>'
             '<li>✅ XsiKOM Icon auf dem Handy!</li>'
             '</ol></div>'
-
             '<div class="cd">'
             '<h3>🍎 iPhone (Safari)</h3>'
             '<ol style="padding-left:25px;line-height:2.5">'
@@ -754,7 +908,6 @@ def register_extra_routes(app):
             '<li>"Hinzufuegen" tippen</li>'
             '<li>✅ XsiKOM Icon auf dem iPhone!</li>'
             '</ol></div>'
-
             '<div class="al ao">'
             '✅ Vorteile: App-Icon, Offline-Modus, wie native App!'
             '</div>'

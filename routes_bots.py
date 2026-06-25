@@ -4,6 +4,7 @@ Alle Imports kommen aus shared.py – kein Import aus webapp.py!
 """
 from flask import render_template_string, request, redirect, session
 from shared import H, DB, ki, pl
+from security_middleware import xss_clean, xss_text
 from avinu_ki import (
     alle_jobs_suchen, get_alle_berufe, jobs_speichern, jobs_laden,
     anschreiben_generieren, auto_bewerbung_erstellen,
@@ -23,21 +24,18 @@ import sqlite3
 # ─────────────────────────────────────────────────────────────────
 
 def _login_required():
-    """Gibt Redirect zurück wenn nicht eingeloggt, sonst None."""
     if "user_id" not in session:
         return redirect("/login")
     return None
 
 
 def _db_connect():
-    """Öffnet DB-Verbindung und gibt (conn, cursor) zurück."""
     cn = sqlite3.connect(DB)
     cc = cn.cursor()
     return cn, cc
 
 
 def _branchen_html():
-    """Gibt Branchen als HTML-Options zurück."""
     namen = {
         "it":          "💻 IT",
         "handwerk":    "🔧 Handwerk",
@@ -61,7 +59,6 @@ def _branchen_html():
 
 
 def _berufe_datalist():
-    """Gibt Berufe als HTML-Datalist-Options zurück."""
     return "".join(
         f'<option value="{beruf}">'
         for beruf in get_alle_berufe()
@@ -69,12 +66,11 @@ def _berufe_datalist():
 
 
 def _unterlagen_status(uid):
-    """Gibt (check_dict, status_html, upload_btn) zurück."""
     ch = xsi_unterlagen_pruefen(uid)
     fehlend = []
     if not ch["lebenslauf"]:  fehlend.append("Lebenslauf")
     if not ch["zeugnis"]:     fehlend.append("Zeugnis")
-    if not ch["zertifikat"]: fehlend.append("Zertifikat")
+    if not ch["zertifikat"]:  fehlend.append("Zertifikat")
     if not ch["bild"]:        fehlend.append("Foto")
 
     if fehlend:
@@ -117,11 +113,15 @@ def register_bot_routes(app):
 
         antwort = ""
         if request.method == "POST":
-            frage = request.form.get("frage", "").strip()
+            frage = xss_text(
+                request.form.get("frage", "").strip()
+            )
             if frage:
-                a = ki(frage).replace("\n", "<br>")
+                # ✅ B4: XSS-sicher
+                a = xss_clean(ki(frage))
                 antwort = (
-                    '<div class="al ai" style="flex-direction:column;align-items:start">'
+                    '<div class="al ai" '
+                    'style="flex-direction:column;align-items:start">'
                     '<strong>🤖 Aaliyah:</strong>'
                     '<div style="margin-top:10px">' + a + '</div>'
                     '</div>'
@@ -153,7 +153,6 @@ def register_bot_routes(app):
         uid = session["user_id"]
         msg = ""
 
-        # ── POST: Jobs suchen ────────────────────────────────────
         if request.method == "POST":
             branche       = request.form.get("branche", "")
             suchbegriff   = request.form.get("suchbegriff", "").strip()
@@ -181,15 +180,11 @@ def register_bot_routes(app):
                 except Exception as e:
                     msg = '<div class="al ae">❌ ' + str(e)[:100] + "</div>"
 
-        # ── Daten laden ──────────────────────────────────────────
         ft   = request.args.get("filter", "offen")
         jobs = jobs_laden(uid, ft)
 
-        # ── Statistiken ──────────────────────────────────────────
         cn, cc = _db_connect()
-        cc.execute(
-            "SELECT COUNT(*) FROM jobs WHERE user_id=?", (uid,)
-        )
+        cc.execute("SELECT COUNT(*) FROM jobs WHERE user_id=?", (uid,))
         total = cc.fetchone()[0]
         try:
             cc.execute(
@@ -206,31 +201,31 @@ def register_bot_routes(app):
             bc = fc = 0
         cn.close()
 
-        # ── Jobs HTML ────────────────────────────────────────────
         FLAGS = {
             "DE": "🇩🇪", "US": "🇺🇸", "UK": "🇬🇧",
             "FR": "🇫🇷", "EU": "🇪🇺", "WORLD": "🌍", "INT": "🌍",
         }
-        STATUS_ICONS = {
-            "erstellt": "📝", "gesendet": "✅",
-            "antwort":  "💬", "absage":   "❌",
-        }
 
         jh = ""
         for j in jobs[:30]:
-            beworben   = j[11]
-            fav        = j[13] if len(j) > 13 else 0
-            land       = j[15] if len(j) > 15 else "DE"
-            fg         = FLAGS.get(land, "🌍")
-            bb         = (
+            beworben = j[11]
+            fav      = j[13] if len(j) > 13 else 0
+            land     = j[15] if len(j) > 15 else "DE"
+            fg       = FLAGS.get(land, "🌍")
+            bb       = (
                 '<span style="background:var(--gn);color:white;'
                 'padding:4px 10px;border-radius:12px;font-size:11px">✅</span>'
                 if beworben else ""
             )
-            url_link   = (
-                f'<a href="{j[6]}" target="_blank">🔗</a>' if j[6] else ""
+            url_link = (
+                f'<a href="{j[6]}" target="_blank">🔗</a>'
+                if j[6] else ""
             )
-            beschr     = (j[5][:200] + "...") if j[5] and len(j[5]) > 200 else (j[5] or "")
+            beschr = (
+                (j[5][:200] + "...")
+                if j[5] and len(j[5]) > 200
+                else (j[5] or "")
+            )
 
             jh += (
                 '<div class="cd">'
@@ -238,12 +233,16 @@ def register_bot_routes(app):
                 'flex-wrap:wrap;gap:15px">'
                 '<div style="flex:1;min-width:280px">'
                 f'<h3>{fg} {j[3]} {bb}</h3>'
-                f'<p style="color:var(--cy);font-size:16px">🏢 <strong>{j[2]}</strong></p>'
+                f'<p style="color:var(--cy);font-size:16px">'
+                f'🏢 <strong>{j[2]}</strong></p>'
                 f'<p style="color:var(--t2);font-size:13px">'
                 f'📍 {j[4]} · 🔗 {j[9]} · 🏷️ {j[8]}</p>'
             )
             if beschr:
-                jh += f'<p style="color:var(--t3);font-size:13px">{beschr}</p>'
+                jh += (
+                    f'<p style="color:var(--t3);font-size:13px">'
+                    f'{beschr}</p>'
+                )
             jh += f'<p>{url_link}</p></div>'
             jh += (
                 '<div style="display:flex;flex-direction:column;gap:8px">'
@@ -262,7 +261,6 @@ def register_bot_routes(app):
                 'Keine Jobs!</p>'
             )
 
-        # ── Seite zusammenbauen ──────────────────────────────────
         c = (
             '<h1>⚡ AVINU - Global Jobs</h1>'
             '<p>10+ Portale · 300+ Berufe · 🌍</p>'
@@ -298,35 +296,29 @@ def register_bot_routes(app):
             '<button type="submit" class="bt b1" style="width:100%">'
             '🚀 Jobs suchen</button>'
             '</form></div>'
-
             '<div class="gr" style="margin:30px 0">'
             '<a href="/avinu?filter=alle" style="text-decoration:none">'
             '<div class="sc"><div class="si">💼</div>'
             f'<div class="sv">{total}</div>'
             '<div class="sl">Alle</div></div></a>'
-
             '<a href="/avinu?filter=offen" style="text-decoration:none">'
             '<div class="sc"><div class="si">📋</div>'
             f'<div class="sv">{total - bc}</div>'
             '<div class="sl">Offen</div></div></a>'
-
             '<a href="/avinu?filter=beworben" style="text-decoration:none">'
             '<div class="sc"><div class="si">✅</div>'
             f'<div class="sv">{bc}</div>'
             '<div class="sl">Beworben</div></div></a>'
-
             '<a href="/avinu?filter=favoriten" style="text-decoration:none">'
             '<div class="sc"><div class="si">⭐</div>'
             f'<div class="sv">{fc}</div>'
             '<div class="sl">Favoriten</div></div></a>'
             '</div>'
-
             f'<h2>🎯 Jobs ({len(jobs)})</h2>'
             + jh
         )
         return render_template_string(H, content=c, user=session)
 
-    # ── Favorit togglen ──────────────────────────────────────────
     @app.route("/avinu/favorit/<int:jid>")
     def avinu_favorit(jid):
         r = _login_required()
@@ -334,7 +326,6 @@ def register_bot_routes(app):
         job_favorit_toggle(jid, session["user_id"])
         return redirect("/avinu")
 
-    # ── Job löschen ───────────────────────────────────────────────
     @app.route("/avinu/loeschen/<int:jid>")
     def avinu_loeschen(jid):
         r = _login_required()
@@ -355,7 +346,6 @@ def register_bot_routes(app):
         st  = xsi_statistiken(uid)
         _, status_html, _, _ = _unterlagen_status(uid)
 
-        # ── Letzte Bewerbungen ───────────────────────────────────
         bw = xsi_bewerbungen_laden(uid)
         bh = ""
         for b in bw[:10]:
@@ -384,26 +374,21 @@ def register_bot_routes(app):
             '<div class="sc"><div class="si">✨</div>'
             '<div class="sv">Neu</div>'
             '<div class="sl">Bewerbung</div></div></a>'
-
             '<div class="sc"><div class="si">📧</div>'
             f'<div class="sv">{st["gesendet"]}</div>'
             '<div class="sl">Gesendet</div></div>'
-
             '<div class="sc"><div class="si">📝</div>'
             f'<div class="sv">{st["erstellt"]}</div>'
             '<div class="sl">Entwuerfe</div></div>'
-
             '<div class="sc"><div class="si">📂</div>'
             f'<div class="sv">{st["unterlagen"]}</div>'
             '<div class="sl">Unterlagen</div></div>'
             '</div>'
-
             '<h2>📧 Bewerbungen</h2>'
             '<div class="cd">' + bh + '</div>'
         )
         return render_template_string(H, content=c, user=session)
 
-    # ── Neue Bewerbung ────────────────────────────────────────────
     @app.route("/xsi/neu", methods=["GET", "POST"])
     def xsi_neu():
         r = _login_required()
@@ -414,12 +399,12 @@ def register_bot_routes(app):
         msg = ""
 
         if request.method == "POST":
-            fi = request.form.get("firma", "").strip()
-            po = request.form.get("position", "").strip()
-            em = request.form.get("empfaenger", "").strip()
+            fi = xss_text(request.form.get("firma",      "").strip())
+            po = xss_text(request.form.get("position",   "").strip())
+            em = xss_text(request.form.get("empfaenger", "").strip())
             ti = request.form.get("template_id", "")
-            sp = request.form.get("sprache", "de")
-            ak = request.form.get("aktion", "erstellen")
+            sp = request.form.get("sprache",     "de")
+            ak = request.form.get("aktion",      "erstellen")
 
             if fi and po and ti:
                 cn, cc = _db_connect()
@@ -435,7 +420,6 @@ def register_bot_routes(app):
                     bi  = xsi_bewerbung_speichern(
                         uid, 0, fi, po, em, bt2, an, "erstellt", sp
                     )
-
                     if ak == "senden" and em:
                         ok, info = xsi_email_senden(em, bt2, an, uid, pr)
                         if ok:
@@ -445,26 +429,31 @@ def register_bot_routes(app):
                                 + fi + " gesendet! " + info + "</div>"
                             )
                         else:
-                            msg = '<div class="al ae">❌ ' + info + "</div>"
+                            msg = (
+                                '<div class="al ae">❌ '
+                                + info + "</div>"
+                            )
                     else:
-                        msg = '<div class="al ao">✅ Entwurf gespeichert!</div>'
+                        msg = (
+                            '<div class="al ao">✅ Entwurf gespeichert!</div>'
+                        )
 
-        # ── Templates ────────────────────────────────────────────
         tp = xsi_templates_laden(premium=session.get("premium", False))
         th = ""
         for t in tp:
             pb = '<span class="bg">💎</span>' if t[5] else ""
             th += (
                 '<label style="display:block;margin:10px 0;padding:16px;'
-                'background:rgba(10,14,26,0.5);border-radius:12px;cursor:pointer">'
-                f'<input type="radio" name="template_id" value="{t[0]}" required>'
+                'background:rgba(10,14,26,0.5);border-radius:12px;'
+                'cursor:pointer">'
+                f'<input type="radio" name="template_id" '
+                f'value="{t[0]}" required>'
                 f' <strong>{t[1]}</strong> {pb}'
                 f'<br><small style="color:var(--t3)">'
                 f'Betreff: {t[2][:50]}... | {t[4].upper()}</small>'
                 '</label>'
             )
 
-        # ── Unterlagen-Status ────────────────────────────────────
         _, _, upload_btn, uh = _unterlagen_status(uid)
 
         c = (
@@ -473,7 +462,6 @@ def register_bot_routes(app):
             '<div class="cd"><h3>📋 Unterlagen</h3>'
             '<div style="margin:10px 0">' + uh + '</div>'
             + upload_btn + '</div>'
-
             '<div class="cd"><h3>📧 Bewerbung</h3>'
             '<form method="POST">'
             '<p>📋 Art:</p>'
@@ -509,12 +497,12 @@ def register_bot_routes(app):
             'class="bt b2" style="flex:1">🚀 Senden!</button>'
             '</div></form></div>'
             '<div class="al ai">'
-            '💡 XSI generiert KI-Anschreiben + haengt ALLE Unterlagen an!'
+            '💡 XSI generiert KI-Anschreiben + '
+            'haengt ALLE Unterlagen an!'
             '</div>'
         )
         return render_template_string(H, content=c, user=session)
 
-    # ── Schnell-Bewerbung aus AVINU ───────────────────────────────
     @app.route("/xsi/schnell/<int:jid>")
     def xsi_schnell(jid):
         r = _login_required()
@@ -533,7 +521,6 @@ def register_bot_routes(app):
             return redirect("/avinu")
         return redirect(f"/xsi/neu?firma={j[0]}&position={j[1]}")
 
-    # ── Bewerbung Detail ─────────────────────────────────────────
     @app.route("/xsi/detail/<int:bid>")
     def xsi_detail(bid):
         r = _login_required()
@@ -574,3 +561,5 @@ def register_bot_routes(app):
             '<a href="/xsi" class="bt b1">← Zurueck</a>'
         )
         return render_template_string(H, content=c, user=session)
+
+       
