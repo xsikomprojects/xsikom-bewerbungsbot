@@ -581,17 +581,18 @@ def register_main_routes(app):
                 'Keine Bewerbungen gefunden</p>'
             )
 
-        c = (
-            '<h1>📧 Bewerbungen</h1>'
+            c = (
+                                         '<h1>📧 Bewerbungen</h1>'
 
-            '<div class="cd">'
-            f'<h3>📊 {anzahl} / {limit_label} Bewerbungen</h3>'
-            '</div>'
+                                         '<div class="cd">'
+                                          f'<h3>📊 {anzahl} / {limit_label} Bewerbungen</h3>'
+                                         '</div>'
 
-            + msg +
-            + tag_filter_html +
+                                        + msg
+                                        + tag_filter_html +
 
-            '<div class="cd">'
+                                        '<div class="cd">'
+     
             '<h3>➕ Neue Bewerbung</h3>'
             '<form method="POST">'
             '<p>📋 Typ:</p>'

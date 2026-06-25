@@ -86,7 +86,6 @@ def init_security(app):
     Initialisiert alle Security-Komponenten.
     Wird in webapp.py aufgerufen.
     """
-
     # ── B2: CSRF ─────────────────────────────────────────────────
     csrf.init_app(app)
 
