@@ -1,3 +1,8 @@
+import os
+import bleach
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_wtf.csrf import CSRFProtect
 """
 Security Middleware: Rate-Limiting, CSRF, Secure Cookies, XSS-Schutz
 Sprint 1 – XsiKOM v10.0
@@ -93,20 +98,16 @@ def init_security(app):
     limiter.init_app(app)
 
     # ── B3: Secure Cookies & Session ─────────────────────────────
-    app.config.update(
-        # Session-Cookie Sicherheit
-        SESSION_COOKIE_HTTPONLY  = True,   # JS kann Cookie nicht lesen
-        SESSION_COOKIE_SAMESITE  = "Lax",  # CSRF-Schutz
-        SESSION_COOKIE_SECURE    = False,  # True wenn HTTPS (Produktion!)
+IS_PROD = os.environ.get("RENDER")
 
-        # CSRF-Token Cookie
-        WTF_CSRF_TIME_LIMIT      = 3600,   # 1 Stunde
-        WTF_CSRF_SSL_STRICT      = False,  # True in Produktion!
-
-        # Sicherheits-Header
-        SEND_FILE_MAX_AGE_DEFAULT = 0,
-    )
-
+app.config.update(
+    SESSION_COOKIE_HTTPONLY  = True,
+    SESSION_COOKIE_SAMESITE  = "Lax",
+    SESSION_COOKIE_SECURE    = bool(IS_PROD),
+    WTF_CSRF_TIME_LIMIT      = 3600,
+    WTF_CSRF_SSL_STRICT      = False,
+    SEND_FILE_MAX_AGE_DEFAULT = 0,
+)
     # ── B3: Security Headers ──────────────────────────────────────
     @app.after_request
     def security_headers(response):
