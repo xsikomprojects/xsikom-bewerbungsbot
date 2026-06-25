@@ -13,15 +13,22 @@ venv311/
 # Uploads
 uploads/
 
+# Persönliche Dateien - NIEMALS hochladen!
+unterlagen/
+anschreiben/
+kalender/
+charts/
+*.xlsx
+*.ics
+*.ico
+xsikom_passwoerter.txt
+
 # Logs
 *.log
 
 # Windows
 Thumbs.db
 desktop.ini
-
-# Passwörter
-xsikom_passwoerter.txt
 
 # Alte Dateien
 manifest (1).json
